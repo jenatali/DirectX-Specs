@@ -30,6 +30,6 @@ shader contracts.
 |---|---|
 | [Command recording and execution](execution.md) | Recording/lifecycle baseline; integrated core submission and fence contracts with flag/status, completion/lifetime and barrier interactions; bounded DDI coverage |
 | [Command-list state initialization](command-list-state.md) | Canonical creation/Reset state, bundle entry/exit, and explicit feature/operation contributions for the pinned graphics interfaces |
-| [Resources and memory](resources.md) | Resource/subresource and storage models; [descriptions and heap properties](resource-properties.md); [creation and allocation](resource-creation.md) |
-| [Synchronization and barriers](synchronization.md) | Legacy resource-state model and canonical common-state promotion/decay rules |
+| [Resources and memory](resources.md) | Resource/heap ownership and backing; descriptions, creation and allocation; memory budgets, residency, CPU mapping and driver responsibilities |
+| [Synchronization and barriers](synchronization.md) | Common foundations; enhanced barriers first; legacy states/barriers and promotion/decay; model interoperation and driver translation |
 | [Fence barriers](fence-barriers.md) | Barrier signals, scoped waits, capability and cache-coherency requirements, with common fence kinds defined in execution |

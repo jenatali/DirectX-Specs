@@ -377,15 +377,9 @@ Legacy resource-state behavior at submission boundaries is defined in [Common-st
 
 #### Enhanced layouts and cross-queue access
 
-Texture subresources may use different layouts for various access methods.  For example, textures are often compressed when used as a render target or depth stencil and are often uncompressed for shader read or copy commands.  Texture Barriers use `LayoutBefore` and `LayoutAfter` `D3D12_BARRIER_LAYOUT` values to describe layout transitions.
+Texture layout transitions and queue/layout compatibility are defined in [Synchronization and barriers](synchronization.md#layout-transitions).
 
-Layout transitions are only needed for textures, therefore they are expressed only in the `D3D12_TEXTURE_BARRIER` data structure.
-
-Both `LayoutBefore` and `LayoutAfter` must be compatible with the type of queue performing the Barrier.  For example, a compute queue cannot transition a subresource into or out of `D3D12_BARRIER_LAYOUT_RENDER_TARGET`.
-
-To provide well-defined barrier ordering, the layout of a subresource after completing a sequence of barriers is the final `LayoutAfter` in the sequence.
-
-Fence ordering does not select a resource's legacy state or change a texture's enhanced layout. Apply the relevant [legacy multi-queue state rules](https://learn.microsoft.com/en-us/windows/win32/direct3d12/user-mode-heap-synchronization#multi-queue-resource-access), [enhanced queue-layout compatibility](../D3D12EnhancedBarriers.md#command-queue-layout-compatibility), [access compatibility](../D3D12EnhancedBarriers.md#command-queue-access-compatibility), and [copy-queue rules](../D3D12EnhancedBarriers.md#copy-queues). These requirements are distinct from waiting for a producer's queue signal.
+Fence ordering does not select a resource's legacy state or change a texture's enhanced layout. Apply the relevant [legacy multi-queue state rules](https://learn.microsoft.com/en-us/windows/win32/direct3d12/user-mode-heap-synchronization#multi-queue-resource-access), [enhanced queue-layout compatibility](synchronization.md#queue-compatibility), [access compatibility](synchronization.md#queue-compatibility), and [copy-queue rules](synchronization.md#queue-compatibility). These requirements are distinct from waiting for a producer's queue signal.
 
 Suspended/resumed render passes must be paired within one `ExecuteCommandLists` group; see [render-pass recording and execution context](command-list-state.md#render-pass). A list boundary inside a batch is not a new submission boundary. Fine-grained [fence barriers](fence-barriers.md) synchronize selected barrier work within a submission.
 
@@ -429,7 +423,7 @@ The D3D12 protected resource session has a status fence whose fence value is inc
 the current uniqueness validity value (using `GetCompletedValue`), and add
 monitors for change of its value. This is a read-only fence.
 
-Read-only status fences must not be signaled through either `ID3D12Fence::Signal` or `ID3D12CommandQueue::Signal`. Their value changes indicate protected-content invalidation, not completion of submitted application work. These writability and value-meaning rules are separate from the [monitoring-capability restrictions](#fence-flags).
+Read-only status fences must not be signaled through `ID3D12Fence::Signal`, `ID3D12CommandQueue::Signal`, or `ID3D12Device3::EnqueueMakeResident`. Their value changes indicate protected-content invalidation, not completion of submitted application work. These writability and value-meaning rules are separate from the [monitoring-capability restrictions](#fence-flags).
 
 <a id="fence-flags"></a>
 
@@ -492,6 +486,8 @@ Fence-barrier use requires `D3D12_FENCE_FLAG_ALLOW_COMMAND_LIST_BARRIERS` explic
 Adapter fence support is described by [`DXGI_ADAPTER_DESC3::Flags`](https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_6/ns-dxgi1_6-dxgi_adapter_desc3), including `DXGI_ADAPTER_FLAG3_SUPPORT_MONITORED_FENCES` and `DXGI_ADAPTER_FLAG3_SUPPORT_NON_MONITORED_FENCES`. When `IDXGIAdapter4` is available, obtain the description through [`IDXGIAdapter4::GetDesc3`](https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_6/nf-dxgi1_6-idxgiadapter4-getdesc3).
 
 Non-monitored fences are used for GPU-side synchronization; they do not provide the CPU progress-observation operations of monitored fences. `ID3D12Fence::Signal` and `ID3D12Fence::SetEventOnCompletion` reject a non-monitored fence with `E_INVALIDARG`. `GetCompletedValue` is invalid for a non-monitored fence and returns `UINT64_MAX`; that value is not a completed-work measurement. Multi-fence CPU notification/wait also requires CPU-wait-capable fences, not non-monitored fences. `GetCreationFlags` is a property query, not a progress query, and is not prohibited by this restriction. Non-monitored instances do not report `D3D12_FENCE_FLAG_ALLOW_COMMAND_LIST_BARRIERS` and are not eligible for command-list fence barriers.
+
+[`ID3D12Device3::EnqueueMakeResident`](resources.md#enqueue-make-resident) is another fence-value producer. Its eligibility and completion rules are defined with residency. Its signal indicates completion of residency work, not completion of the application's GPU accesses to those resources.
 
 <a id="command-list-scoped-fences"></a>
 
