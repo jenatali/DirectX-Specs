@@ -1893,11 +1893,11 @@ Protected creation methods for heaps, committed resources, and reserved resource
 
 Creation methods that accept `InitialLayout` require `D3D12_FEATURE_DATA_D3D12_OPTIONS12::EnhancedBarriersSupported`. Buffer resources use `D3D12_BARRIER_LAYOUT_UNDEFINED`; texture resources use a layout compatible with their resource description.
 
-`NumCastableFormats` is the element count of `pCastableFormats`. The [format-list casting contract](../VulkanOn12.md#format-list-casting) specifies eligible formats and corresponding view restrictions; this is separate from [fully typed format-family casting](../RelaxedCasting.md#casting-rules-for-rs2-drivers).
+`NumCastableFormats` is the element count of `pCastableFormats`. The [format-list casting contract](formats.md#cast-lists) specifies eligible formats and corresponding view restrictions; this is separate from [fully typed format-family casting](formats.md#casting).
 
 With enhanced-layout creation, a texture with `D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS` uses `D3D12_BARRIER_LAYOUT_COMMON` as its initial layout. The absence of a buffer layout does not remove the upload/readback usage restrictions.
 
-A zero-count, null castable-format list retains ordinary format-casting rules. With an explicit list, other view formats must satisfy that list's contract; the resource's own format need not be repeated in the list. Format-list casting requires `D3D12_FEATURE_DATA_D3D12_OPTIONS12::RelaxedFormatCastingSupported`.
+Zero-list interpretation and the resource-own-format exception are defined by the [format-list casting contract](formats.md#cast-lists). Format-list casting requires `D3D12_FEATURE_DATA_D3D12_OPTIONS12::RelaxedFormatCastingSupported`.
 
 <a id="resource-queries"></a>
 

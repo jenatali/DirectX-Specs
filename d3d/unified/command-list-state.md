@@ -1,6 +1,6 @@
 # Command-list state initialization
 
-This chapter defines initial/reset state and bundle entry/exit state for `DIRECT`, `COMPUTE`, `COPY`, and `BUNDLE` recordings through `ID3D12GraphicsCommandList10` and its base graphics command-list interfaces. DXIL/SM6 shader contracts remain external. The state-family index identifies each definition.
+This chapter defines initial/reset state and bundle entry/exit state for `DIRECT`, `COMPUTE`, `COPY`, and `BUNDLE` recordings through `ID3D12GraphicsCommandList10` and its base graphics command-list interfaces. The state-family index identifies each definition.
 
 <a id="recording-boundaries"></a>
 
@@ -62,13 +62,15 @@ Meta-command availability is established by enumerating/creating a supported met
 
 **Related APIs:** `ID3D12GraphicsCommandList10::SetProgram`, `ID3D12GraphicsCommandList4::SetPipelineState1`, `ID3D12GraphicsCommandList::SetPipelineState`.
 
-On a direct, compute, or bundle command list that uses graphics or compute pipeline state, `pInitialState` in `CreateCommandList` or `Reset` supplies the initial pipeline state object (PSO). If it is `NULL`, the runtime selects its default graphics state for direct lists and bundles, or its default compute state for compute lists. This default does not supply an application shader program; the application must establish the pipeline state required by a draw or dispatch. Copy command lists have no pipeline state and do not use `pInitialState`.
+On a direct, compute, or bundle command list that uses graphics or compute pipeline state, `pInitialState` in `CreateCommandList` or `Reset` supplies the initial pipeline state object (PSO). If it is `NULL`, the runtime selects its default graphics state for direct lists and bundles, or its default compute state for compute lists. This default does not supply an application shader program; the application must establish the pipeline state required by a draw or dispatch. Copy command lists have no pipeline state and do not use `pInitialState`. Ordinary graphics/compute PSO descriptions and creation are defined in [Pipeline state and shader linkage](pipeline-state.md#ordinary-pipeline-state).
 
 Pipeline/program selection is one logical selection, not independent additive bindings for `SetPipelineState`, `SetPipelineState1`, and `SetProgram`. Starting a recording with the supplied/default PSO does not retain a previously selected raytracing pipeline or work graph. Select the required pipeline/program before issuing the corresponding draw, dispatch, ray dispatch, or graph dispatch.
 
 PSO-contained fields have the values of the selected object; `Reset` changes the selection, not the PSO's description.
 
 For a bundle, pipeline state is not inherited from the parent. State selected or changed by the bundle affects the parent afterward.
+
+All pipeline state objects referenced by a bundle must have the same number of render targets, corresponding render-target formats, depth-stencil format, and sample count/quality descriptions.
 
 <a id="set-pipeline-state1"></a>
 
@@ -107,7 +109,7 @@ Rebinding a work graph after list `Reset` is not itself a request to reinitializ
 
 ### Initial bindings
 
-Direct and compute recordings begin with no shader-visible descriptor heaps selected and no established root arguments. Undefined initial root/table state is not a promise of zero constants, null root descriptors, or valid null tables. Establish the signature and arguments required by the work.
+Direct and compute recordings begin with no shader-visible descriptor heaps selected and no established root arguments. Undefined initial root/table state is not a promise of zero constants, null root descriptors, or valid null tables. Establish the signature and arguments required by the work. Root-signature definitions and descriptor/data lifetime promises are specified in [Resource binding and root signatures](binding.md#root-signatures).
 
 At the beginning of a command list, the root signature is undefined.
 
@@ -182,11 +184,7 @@ and returned back to the command list.
 
 #### Static-data bundle bindings (`DATA_STATIC`)
 
-The data pointed to by descriptors has been initialized by the time a
-root descriptor or descriptor table referencing the memory has been set
-on a command list / bundle (during recording), and the data cannot be
-changed until the command list / bundle has finished executing for the
-last time.
+`DATA_STATIC` defines a [recording-to-final-execution data lifetime](binding.md#data-static). Its bundle-specific application is:
 
 For bundles, to clarify, the static duration starts at root descriptor
 or descriptor table setting during the recording of the bundle, as
