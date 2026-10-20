@@ -843,8 +843,8 @@ The alignment value for the heap. Valid values:
 | Value | Description |
 | --- | --- |
 | 0 | An alias for 64KB. |
-| `D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT` | #defined as 64KB. |
-| `D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT` | #defined as 4MB. This alignment is required when a resource's allocation alignment exceeds 64KB. Eligible small or tightly aligned MSAA resources do not by themselves require a 4MB-aligned heap. |
+| `D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT` | Defined as 64KB. |
+| `D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT` | Defined as 4MB. This alignment is required when a resource's allocation alignment exceeds 64KB. Eligible small or tightly aligned MSAA resources do not by themselves require a 4MB-aligned heap. |
 
 ### `Flags`
 

@@ -395,30 +395,11 @@ typedef struct D3D12_INPUT_LAYOUT_DESC
 
 #### D3D12_SO_DECLARATION_ENTRY
 
-```cpp
-typedef struct D3D12_SO_DECLARATION_ENTRY
-{
-    UINT Stream;
-    LPCSTR SemanticName;
-    UINT SemanticIndex;
-    BYTE StartComponent;
-    BYTE ComponentCount;
-    BYTE OutputSlot;
-} D3D12_SO_DECLARATION_ENTRY;
-```
+Defined in [D3D12_SO_DECLARATION_ENTRY](geometry-shaders-and-stream-output.md#so-declaration-entry).
 
 #### D3D12_STREAM_OUTPUT_DESC
 
-```cpp
-typedef struct D3D12_STREAM_OUTPUT_DESC
-{
-    const D3D12_SO_DECLARATION_ENTRY* pSODeclaration;
-    UINT NumEntries;
-    const UINT* pBufferStrides;
-    UINT NumStrides;
-    UINT RasterizedStream;
-} D3D12_STREAM_OUTPUT_DESC;
-```
+Defined in [D3D12_STREAM_OUTPUT_DESC](geometry-shaders-and-stream-output.md#stream-output-desc).
 
 #### D3D12_INDEX_BUFFER_STRIP_CUT_VALUE
 
@@ -486,55 +467,19 @@ The number of input-data types in the array of input elements that the **pInputE
 
 #### D3D12_SO_DECLARATION_ENTRY members
 
-`Stream`
-
-Zero-based, stream number.
-
-`SemanticName`
-
-Type of output element; possible values include: **"POSITION"**, **"NORMAL"**, or **"TEXCOORD0"**. Note that if **SemanticName** is **NULL** then **ComponentCount** can be greater than 4 and the described entry will be a gap in the stream out where no data will be written.
-
-`SemanticIndex`
-
-Output element's zero-based index. Use, for example, if you have more than one texture coordinate stored in each vertex.
-
-`StartComponent`
-
-The component of the entry to begin writing out to. Valid values are 0 to 3. For example, if you only wish to output to the y and z components of a position, **StartComponent** is 1 and **ComponentCount** is 2.
-
-`ComponentCount`
-
-The number of components of the entry to write out to. Valid values are 1 to 4. For example, if you only wish to output to the y and z components of a position, **StartComponent** is 1 and **ComponentCount** is 2. Note that if **SemanticName** is **NULL** then **ComponentCount** can be greater than 4 and the described entry will be a gap in the stream out where no data will be written.
-
-`OutputSlot`
-
-The associated stream output buffer that is bound to the pipeline. The valid range for **OutputSlot** is 0 to 3.
+Defined in [D3D12_SO_DECLARATION_ENTRY](geometry-shaders-and-stream-output.md#so-declaration-entry).
 
 #### D3D12_STREAM_OUTPUT_DESC members
 
-`pSODeclaration`
+Defined in [D3D12_STREAM_OUTPUT_DESC](geometry-shaders-and-stream-output.md#stream-output-desc).
 
-An array of [`D3D12_SO_DECLARATION_ENTRY`](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/ns-d3d12-d3d12_so_declaration_entry) structures. Can't be **NULL** if **NumEntries** &gt; 0.
+<a id="input-layout-constraints"></a>
 
-`NumEntries`
+#### Input-layout and stream-output constraints
 
-The number of entries in the stream output declaration array that the **pSODeclaration** member points to.
+`SemanticName` and `SemanticIndex` identify shader input/output signature entries, not the buffer byte offset. Element formats must support vertex input and be compatible with the vertex-shader input signature. Stream output declarations describe shader output components and gaps; an empty declaration does not make an otherwise invalid shader-stage combination legal. `PrimitiveTopologyType` is the PSO's point/line/triangle/patch class; the command-list [primitive topology](vertex-processing.md#topology-enumeration) supplies the corresponding detailed list/strip/adjacency/patch selection. [Input assembly and direct draws](vertex-processing.md#input-assembly) define vertex/index fetching, primitive assembly and generated identifiers.
 
-`pBufferStrides`
-
-An array of buffer strides; each stride is the size of an element for that buffer.
-
-`NumStrides`
-
-The number of strides (or buffers) that the **pBufferStrides** member points to.
-
-`RasterizedStream`
-
-The index number of the stream to be sent to the rasterizer stage.
-
-`SemanticName` and `SemanticIndex` identify shader input/output signature entries, not the buffer byte offset. Element formats must support vertex input and be compatible with the vertex-shader input signature. Stream output declarations describe shader output components and gaps; an empty declaration does not make an otherwise invalid shader-stage combination legal. `PrimitiveTopologyType` is the PSO's point/line/triangle/patch class; the command-list [primitive topology](command-list-state.md#base-bundle-state) supplies the corresponding detailed list/strip/adjacency/patch selection.
-
-A nonempty input-layout or stream-output count requires the corresponding valid array storage. Input-layout elements cannot exceed `D3D12_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT` (32). `D3D12_APPEND_ALIGNED_ELEMENT` requests appended element placement rather than making `AlignedByteOffset` an optional field. Stream output may use `D3D12_SO_NO_RASTERIZED_STREAM` to select no rasterized stream.
+A nonempty input-layout or stream-output count requires the corresponding valid array storage. Input-layout elements cannot exceed `D3D12_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT` (32). `D3D12_APPEND_ALIGNED_ELEMENT` requests appended element placement rather than making `AlignedByteOffset` an optional field. Stream output may use `D3D12_SO_NO_RASTERIZED_STREAM` to select no rasterized stream. Elements sharing an `InputSlot` must have the same `InputSlotClass` and `InstanceDataStepRate`. For per-instance data, a step rate of zero means that the instance data is never advanced. `D3D12_APPEND_ALIGNED_ELEMENT` places an element after the preceding element in the same input slot, rounded up to the new element format's required alignment. If it is the first element in that slot, its appended offset is zero.
 
 A nonempty input layout requires the root signature's `D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT` permission; enabled stream output requires `D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT`. These creation conditions are distinct from actually binding vertex or stream-output buffers on the command list.
 
@@ -1256,7 +1201,7 @@ Configures view instancing with additional options.
 
 `ViewInstanceCount` cannot exceed `D3D12_MAX_VIEW_INSTANCE_COUNT` (4). `D3D12_FEATURE_DATA_D3D12_OPTIONS3.ViewInstancingTier` reports the supported tier. View locations and masking are defined by [view instancing](../ViewInstancing.md#view-instance-locations); the command-list [view mask](command-list-state.md#view-mask) is not stored as a mutable PSO field.
 
-A view count greater than one or `D3D12_VIEW_INSTANCING_FLAG_ENABLE_VIEW_INSTANCE_MASKING` requires `ViewInstancingTier` other than `D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED`. A count of one additionally requires device support for Shader Model 6.1 or higher, even if the shaders do not consume `SV_ViewID`. A count of zero retains the disabled behavior without imposing that creation requirement; shaders that use `SV_ViewID` still require their shader-model support. Supported tiers do not introduce an additional prohibition on shader output of viewport/render-target array indices.
+A view count greater than one or `D3D12_VIEW_INSTANCING_FLAG_ENABLE_VIEW_INSTANCE_MASKING` requires `ViewInstancingTier` other than `D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED`. A count of one additionally requires device support for Shader Model 6.1 or higher, even if the shaders do not consume `SV_ViewID`. A count of zero retains the disabled behavior without imposing that creation requirement; shaders that use `SV_ViewID` still require their shader-model support. Supported tiers do not introduce an additional prohibition on shader output of viewport/render-target array indices. [View-dependent stage storage and work ordering](vertex-processing.md#geometry-view-instancing) define the interstage execution contract.
 
 <a id="apis"></a>
 
@@ -1467,7 +1412,7 @@ The runtime validates:
 - Whether pixel shader output type is compatible with render target format.
 - Whether the sample count and quality are supported for the render target/depth stencil formats.
 
-Traditional graphics creation requires a vertex shader; compute creation requires a compute shader. Hull and domain shaders occur together, use patch topology and require compatible control-point counts, patch signatures and tessellator domains. A geometry shader's input primitive must agree with the preceding topology or tessellator output. Stage linkage checks consumed inputs and their compatible semantics/types/components, not identical complete signatures.
+Traditional graphics creation requires a vertex shader; compute creation requires a compute shader. Hull and domain shaders occur together and use patch topology. The hull shader's output control-point count and tessellator domain must match the domain shader's declarations; both their control-point and patch-constant signatures must match. A geometry shader's input primitive must agree with the preceding topology or tessellator output. Other stage linkages check consumed inputs and their compatible semantics/types/components, not identical complete signatures; that subset rule does not relax the HS/DS interfaces. [Vertex processing and tessellation](vertex-processing.md#vertex-processing) define the stage execution, factor and patch-identity contracts.
 
 Active shader stages within one graphics PSO must not mix DXBC and DXIL bytecode. This is a consistency requirement on the bytecode family, not a requirement that every stage use the identical shader-model number. Mixing those families is invalid and creation returns `E_INVALIDARG`.
 

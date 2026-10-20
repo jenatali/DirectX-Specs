@@ -23,6 +23,8 @@ availability and D3D12 applicability are distinct.
 The DXIL specification and its shader-model 6.x contracts are also in scope as
 a supporting appendix. Shared API, DDI, and hardware requirements have canonical
 definitions in the main chapters, referenced by the shader appendices.
+Main stage chapters describe overall behavior for both shader representations;
+the DXIL appendix supplies the complete behavior reference for every intrinsic.
 
 ## Chapters
 
@@ -36,3 +38,7 @@ definitions in the main chapters, referenced by the shader appendices.
 | [Resource binding and root signatures](binding.md) | Descriptor heaps/tables/handles, root arguments and signature versions, static/data promises, direct indexing, sampler extensions, ordinary APIs and selected driver contracts |
 | [Formats and views](formats.md) | Format interpretation/casting; complete selected view descriptions; ordinary and feedback view creation; plane, support-query and selected driver contracts |
 | [Pipeline state and shader linkage](pipeline-state.md) | Ordinary graphics/compute PSO descriptions and streams, supporting state, shader/root compatibility, cache blobs, selection and selected driver contracts |
+| [Input assembly and vertex processing](vertex-processing.md) | IA/direct draws, fetching and primitive assembly, generated IDs, VS, shared interface capacities and view-instancing rules, and selected driver responsibilities |
+| [Tessellation: hull and domain processing](tessellation.md) | DXIL/DXBC HS models, fixed-function patterns and factor processing, precision/watertightness, patch routing, DS and selected driver responsibilities |
+| [Geometry shaders and stream output](geometry-shaders-and-stream-output.md) | Invocation/streams/emission and output budgets, DXBC/DXIL models, PSO capture declarations, SO target/counter binding, whole-primitive overflow/statistics and selected driver responsibilities |
+| Amplification and mesh shading | Dedicated chapter planned; execution/API/DDI material is not yet consolidated |
