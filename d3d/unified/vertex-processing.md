@@ -1189,6 +1189,8 @@ that loops draws to implement view instancing will run all UAV memory
 accesses per-view. But at Tier 3, implementations must assume the
 results of UAV reads before the rasterizer are not SV_ViewID dependent.
 
+Mesh shading adds [ViewID-dependent output and groupshared limits](amplification-and-mesh-shaders.md#sv_viewid), [aligned output-space accounting](amplification-and-mesh-shaders.md#mesh-shader-output-size-limits), [per-view primitive culling](amplification-and-mesh-shaders.md#sv_cullprimitive), [rasterization ordering](amplification-and-mesh-shaders.md#rasterization-order) and [MSPrimitives view counting](counters-queries-and-predication.md#msprimitives-and-view-instancing). For mesh-stage dependency analysis, a global-memory read at a ViewID-dependent address is dependent; the preceding ordinary-geometry UAV-result assumption does not override that mesh-specific rule. AS does not receive ViewID.
+
 <a id="geometry-view-tessellation"></a>
 
 ### Tessellation-factor selection

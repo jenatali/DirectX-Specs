@@ -30,7 +30,7 @@ The declared GS instance count is 1 through 32. Without instancing there is one 
 
 ### Invocation statistics
 
-The GSInvocations [Pipeline Statistics counter](../archive/D3D11_3_FunctionalSpec.htm#PipelineStatistics) reports the number of primitives input to the GS multiplied by the instance count per primitive. That is, each "instance" counts as a GSInvocation.
+The [pipeline-statistics contract](counters-queries-and-predication.md#pipeline-statistics) defines GSInvocations, including the GS-instance multiplicity defined above.
 
 <a id="gs-output"></a>
 
@@ -367,12 +367,9 @@ With enhanced barriers, target data and filled-size storage use the [stream-outp
 
 ### Overflow and statistics
 
-Stream-output statistics queries report two counters for each stream:
+The [SO statistics query](counters-queries-and-predication.md#stream-output-statistics) measures the overflow behavior below.
 
-- UINT64 NumPrimitivesWritten = the number of primitives written to a Stream
-- UINT64 PrimitivesStorageNeeded = the total number of primitives that would have been written given sufficient storage for the Buffer(s) in a Stream.
-
-The query result reports the differences between its begin and end samples. The NumPrimitivesWritten and PrimitivesStorageNeeded results will not be equal if the draw calls covered by that query interval generate more primitives than there is space left in the smallest of the currently bound Buffer(s) to store them. Note there is only one NumPrimitivesWritten counter per Stream even though it is possible to have multiple simultaneous Buffers bound for writing by a Stream. Stream Output is defined to stop all writes to a Stream if one of the Buffers being written by that stream does not have room for another complete primitive.
+The NumPrimitivesWritten and PrimitivesStorageNeeded results will not be equal if the draw calls covered by that query interval generate more primitives than there is space left in the smallest of the currently bound Buffer(s) to store them. Note there is only one NumPrimitivesWritten counter per Stream even though it is possible to have multiple simultaneous Buffers bound for writing by a Stream. Stream Output is defined to stop all writes to a Stream if one of the Buffers being written by that stream does not have room for another complete primitive.
 
 The hardware always writes as many complete primitives (e.g. 3 vertices for a triangle) as possible to the Buffer(s) for a Stream; a given primitive is written only if there is enough space for its entire contents (e.g. 3 times the vertex stride for triangles must be available in the Buffer) in all the output Buffers for the Stream. If any Buffer for a Stream becomes full before the draw call has completed (i.e. no more space for a complete primitive to be appended), Shader execution continues, along with sustained incrementing of the PrimitivesStorageNeeded counter for that Stream, but not the NumPrimitivesWritten counter for that Stream. In addition, the Shader's outputs are no longer written to any of the output Buffers for that Stream. Output to other Streams functions independently.
 
@@ -382,23 +379,7 @@ If multiple Buffers are being written by a given Stream, as soon as one of the B
 
 #### D3D12_QUERY_DATA_SO_STATISTICS
 
-```cpp
-typedef struct D3D12_QUERY_DATA_SO_STATISTICS
-{
-    UINT64 NumPrimitivesWritten;
-    UINT64 PrimitivesStorageNeeded;
-} D3D12_QUERY_DATA_SO_STATISTICS;
-```
-
-`NumPrimitivesWritten`
-
-The number of primitives (that is, points, lines, and triangles) that were actually written to the stream output resource.
-
-`PrimitivesStorageNeeded`
-
-If the stream output resource is large enough, then *PrimitivesStorageNeeded* represents the total number of primitives written to the stream output resource. Otherwise, it represents the total number of primitives that *would* have been written to the stream-output resource had there been enough space for them all.
-
-`D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0` through `D3D12_QUERY_TYPE_SO_STATISTICS_STREAM3` select per-stream statistics from a `D3D12_QUERY_HEAP_TYPE_SO_STATISTICS` heap. These primitive counts are distinct from the filled-size byte value and GS emission limits. `BeginQuery` and `EndQuery` define the measured interval; `ResolveQueryData` makes its result available. Unequal written and storage-needed results indicate insufficient capture storage. Predicate and [indirect execution](../IndirectDrawing.md) use their own buffer/operation contracts.
+The complete [SO query payload, member meanings and per-stream interval semantics](counters-queries-and-predication.md#stream-output-statistics) are defined in the general query chapter; overflow and capture mechanics remain here.
 
 <a id="so-slot-behavior"></a>
 

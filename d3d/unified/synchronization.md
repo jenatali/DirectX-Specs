@@ -287,7 +287,7 @@ Command list processing does not proceed further until all records in the `Dispa
 
 It is invalid for command lists that reference the same work graph backing memory to be submitted to multiple device queues such that they might run in parallel.  Behavior is undefined in this case.
 
-The work-graph completion and [backing-memory restrictions](../WorkGraphs.md#backing-memory) are additional operation contracts; merely submitting its input records does not prove execution completion. [Acceleration-structure writes/reads](../Raytracing.md#synchronizing-acceleration-structure-memory-writesreads) use the fixed-resource and UAV-equivalence rules below. Mesh/amplification shading belongs to the vertex-shading scope; listing ordinary draw entry points does not exclude the [mesh dispatch operation](../MeshShader.md#dispatchmesh-api). These references concern D3D12 operation/memory contracts, not shader-language barrier instructions.
+The work-graph completion and [backing-memory restrictions](../WorkGraphs.md#backing-memory) are additional operation contracts; merely submitting its input records does not prove execution completion. [Acceleration-structure writes/reads](../Raytracing.md#synchronizing-acceleration-structure-memory-writesreads) use the fixed-resource and UAV-equivalence rules below. Mesh/amplification shading belongs to the vertex-shading scope; listing ordinary draw entry points does not exclude the [mesh dispatch operation](amplification-and-mesh-shaders.md#dispatchmesh). These references concern D3D12 operation/memory contracts, not shader-language barrier instructions.
 
 <a id="barrier-access"></a>
 

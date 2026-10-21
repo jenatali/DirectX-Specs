@@ -386,6 +386,8 @@ For pipelines created with the corresponding flag, the _current_ depth bias stat
 
 ## Predication and query context
 
+The complete [query lifecycle and type support](counters-queries-and-predication.md#query-lifecycle) and [predicate comparison/operation matrix](counters-queries-and-predication.md#predication) are defined by the general chapter. This section retains graphics recording-context defaults and bundle boundaries.
+
 **Related APIs:** `ID3D12GraphicsCommandList::BeginQuery`, `ID3D12GraphicsCommandList::EndQuery`, `ID3D12GraphicsCommandList::SetPredication`.
 
 Predication is disabled at the start of a direct or compute recording. A bundle inherits the effective predicate and cannot call `SetPredication`. No queries are active in a new recording. Query Begin/End operations cannot span a `Reset`; queries begun in a recording must be ended before `Close`, and query Begin/End cannot be recorded in a bundle. Outstanding queries must also be ended before changing the protected-resource session.
