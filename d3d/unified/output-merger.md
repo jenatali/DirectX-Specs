@@ -553,6 +553,8 @@ Output-merger tests, blending/logic operations and attachment updates preserve t
 
 ### Clear, copy and resolve interactions
 
+The complete ordinary [clear](resource-operations.md#clear-commands), [copy](resource-operations.md#copy-commands), [resolve](resource-operations.md#resolve-commands) and [discard](resource-operations.md#discard-commands) API entries define their independent destinations and recording/format requirements. Render-pass access operations and the read-only-view interaction here remain separately defined.
+
 `ClearRenderTargetView` and `ClearDepthStencilView` are descriptor-addressed clear operations, not draws. They are not controlled by the currently bound PSO color/depth/stencil write masks, blend state or sample mask. Depth/stencil clear aspect selection comes from the clear flags. Scissor state does not replace the clear rectangles. This does not legalize a clear during an active render pass: [pass recording restrictions](#render-pass-recording) apply, and pass `CLEAR` accesses are specified [below](#d3d12_render_pass_beginning_access_clear).
 
 Copies/resolves address their own resources/subresources, not the currently bound RTV/DSV set. A read-only output view is not a resource-wide prohibition on a later write through another valid operation/view; the operation still requires the appropriate resource access/layout/state, lifetime and view/format compatibility.

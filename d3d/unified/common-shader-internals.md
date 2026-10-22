@@ -1782,7 +1782,7 @@ The writing of feedback does not support offsets. That is, all feedback should b
 
 ### Feedback footprint and helper behavior
 
-Meaningful values for sampler feedback are obtained through [transcoding](../SamplerFeedback.md#transcoding). The interpretations depend on whether the map records [minimum mip](../SamplerFeedback.md#minmip-feedback-map) or [mip-region use](../SamplerFeedback.md#mipregionused-feedback-map).
+Meaningful values for sampler feedback are obtained through [transcoding](resource-operations.md#feedback-transcoding). The interpretations depend on whether the map records [minimum mip](../SamplerFeedback.md#minmip-feedback-map) or [mip-region use](../SamplerFeedback.md#mipregionused-feedback-map).
 
 If the paired texture is a tiled resource with packed mips, feedback writes involving the packed mips don't behave differently from non-packed mips.
 
@@ -1822,7 +1822,7 @@ On [pixel-shader helper lanes](pixel-shaders.md#helper-lanes), sampler-feedback 
 >
 > Given the [stochastic feedback-update behavior](../SamplerFeedback.md#performance-and-stochastic-update-of-feedback-maps), streaming applications are unlikely to experience imprecise LOD selection due to feedback not being written from helper lanes. However, in the cases where this poses a problem, applications could work around it by, for example, avoiding primitives which very closely straddle tile boundaries.
 
-`WriteSamplerFeedback`, `WriteSamplerFeedbackBias`, `WriteSamplerFeedbackLevel` and `WriteSamplerFeedbackGrad` mirror the corresponding implicit, bias, explicit-LOD and explicit-gradient sampling footprint calculations. Their [method kinds and stage restrictions](#feedback-method-contract), [zero-offset and paired-texture requirements](#feedback-zero-offset), and [sampler/SRV capability-tier restrictions](#feedback-capability-tiers) apply to those calculations. Support is reported by `D3D12_FEATURE_DATA_D3D12_OPTIONS7::SamplerFeedbackTier`. MinMip and MipRegionUsed interpretation and [opaque-map transcoding](../SamplerFeedback.md#transcoding) remain distinct from shader color-sampling operations.
+`WriteSamplerFeedback`, `WriteSamplerFeedbackBias`, `WriteSamplerFeedbackLevel` and `WriteSamplerFeedbackGrad` mirror the corresponding implicit, bias, explicit-LOD and explicit-gradient sampling footprint calculations. Their [method kinds and stage restrictions](#feedback-method-contract), [zero-offset and paired-texture requirements](#feedback-zero-offset), and [sampler/SRV capability-tier restrictions](#feedback-capability-tiers) apply to those calculations. Support is reported by `D3D12_FEATURE_DATA_D3D12_OPTIONS7::SamplerFeedbackTier`. MinMip and MipRegionUsed interpretation and [opaque-map transcoding](resource-operations.md#feedback-transcoding) remain distinct from shader color-sampling operations.
 
 <a id="sampling-precision"></a>
 

@@ -8,6 +8,8 @@ Queries measure GPU work and expose typed results through query heaps. Predicati
 
 ## Application-managed counters
 
+Ordinary [counter backing-byte copy/clear interactions](resource-operations.md#counter-interactions) do not implicitly operate on a separately associated counter resource. Query/counter/predicate distinctions and each operation's policy remain canonical in this chapter.
+
 The application is responsible for allocating storage for a 32-bit
 quantity called the BufferFilledSize. This contains the number of bytes
 of data in the stream-output buffer. This storage may be placed in the resource containing the stream-output data or in a different resource. This

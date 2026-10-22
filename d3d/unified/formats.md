@@ -384,6 +384,8 @@ An `R32_UINT` UAV can reinterpret a UAV-eligible texture created with `R10G10B10
 
 ### Explicit castable-format lists
 
+Bit-preserving [copy reinterpretation](resource-operations.md#reinterpret-copy), [clear conversion](resource-operations.md#clear-conversion) and [resolve/transcoding modes](resource-operations.md#resolve-commands) are distinct operation contracts. A view/resource casting permission does not by itself grant an arbitrary equal-byte-size copy or resolve.
+
 The permitted integer aliases are used by [raw gather](common-shader-internals.md#raw-gather) for bitwise element retrieval. That shader operation does not replace the resource/view cast-list creation and compatibility requirements here.
 
 D3D12 provides an API at resource creation to specify a list of castable formats for the resource.

@@ -241,6 +241,8 @@ once. `ExecuteIndirect` state effects are defined in [indirect execution](comman
 
 ### Descriptor population and CPU access
 
+Descriptor-addressed clears have their [full operation contracts](resource-operations.md#clear-commands). [UAV clears](resource-operations.md#uav-clear-values) require matching CPU/GPU views and a resource argument, with the specified heap visibility; descriptor lifetime/population remains defined here.
+
 Now back to discussing opaque descriptors that live in descriptor heaps:
 fully general SRV / UAV / CBV and Samplers.
 

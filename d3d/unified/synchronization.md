@@ -48,6 +48,8 @@ typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS12
 
 ### Barrier types
 
+The [copy/clear/resolve/discard operation table](resource-operations.md#recording-and-access) identifies the access/layout and queue context used by each API. Its [enhanced self-copy cases](resource-operations.md#copy-self-and-alias), [in-place decompression](resource-operations.md#regional-resolve-support), and [discard initialization](resource-operations.md#discard-initialization) retain the specific synchronization conditions here; an API call is not a general implicit barrier.
+
 Enhanced Barrier APIs provide three barrier types:
 
 - Texture Barriers
@@ -1679,17 +1681,17 @@ A subresource must be in this state when it is accessed by the 3D pipeline as an
 
 #### D3D12_RESOURCE_STATE_RENDER_TARGET
 
-The resource is used as a render target. A subresource must be in this state when it is rendered to, or when it is cleared with [ID3D12GraphicsCommandList::ClearRenderTargetView](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-clearrendertargetview).
+The resource is used as a render target. A subresource must be in this state when it is rendered to, or when it is cleared with [ID3D12GraphicsCommandList::ClearRenderTargetView](resource-operations.md#clearrendertargetview).
 
 This is a write-only state. To read from a render target as a shader resource, the resource must be in either `D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE` or `D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE`.
 
 #### D3D12_RESOURCE_STATE_UNORDERED_ACCESS
 
-The resource is used for unordered access. A subresource must be in this state when it is accessed by the GPU via an unordered access view. A subresource must also be in this state when it is cleared with [ID3D12GraphicsCommandList::ClearUnorderedAccessViewUint](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-clearunorderedaccessviewuint) or [ID3D12GraphicsCommandList::ClearUnorderedAccessViewFloat](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-clearunorderedaccessviewfloat). This is a read/write state.
+The resource is used for unordered access. A subresource must be in this state when it is accessed by the GPU via an unordered access view. A subresource must also be in this state when it is cleared with [ID3D12GraphicsCommandList::ClearUnorderedAccessViewUint](resource-operations.md#clearunorderedaccessviewuint) or [ID3D12GraphicsCommandList::ClearUnorderedAccessViewFloat](resource-operations.md#clearunorderedaccessviewfloat). This is a read/write state.
 
 #### D3D12_RESOURCE_STATE_DEPTH_WRITE
 
-`D3D12_RESOURCE_STATE_DEPTH_WRITE` is a state that is mutually exclusive with other states. You should use it for [ID3D12GraphicsCommandList::ClearDepthStencilView](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-cleardepthstencilview) when the flags (see [`D3D12_CLEAR_FLAGS`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_clear_flags)) indicate a given subresource should be cleared (otherwise the subresource state doesn't matter), or when using it in a writable depth stencil view (see [`D3D12_DSV_FLAGS`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_dsv_flags)) when the PSO has depth write enabled (see [`D3D12_DEPTH_STENCIL_DESC`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_depth_stencil_desc)).
+`D3D12_RESOURCE_STATE_DEPTH_WRITE` is a state that is mutually exclusive with other states. You should use it for [ID3D12GraphicsCommandList::ClearDepthStencilView](resource-operations.md#cleardepthstencilview) when the flags (see [`D3D12_CLEAR_FLAGS`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_clear_flags)) indicate a given subresource should be cleared (otherwise the subresource state doesn't matter), or when using it in a writable depth stencil view (see [`D3D12_DSV_FLAGS`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_dsv_flags)) when the PSO has depth write enabled (see [`D3D12_DEPTH_STENCIL_DESC`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_depth_stencil_desc)).
 
 #### D3D12_RESOURCE_STATE_DEPTH_READ
 
@@ -1954,7 +1956,7 @@ Initial-state constraints are defined by [resource creation](resources.md#creati
 
 Before a back buffer is presented, it must be in the `D3D12_RESOURCE_STATE_COMMON` state. Note, the resource state `D3D12_RESOURCE_STATE_PRESENT` is a synonym for `D3D12_RESOURCE_STATE_COMMON`, and they both have a value of 0. If [**IDXGISwapChain::Present**](https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-present) (or [**IDXGISwapChain1::Present1**](https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_2/nf-dxgi1_2-idxgiswapchain1-present1)) is called on a resource that is not currently in this state, a debug layer warning is emitted.
 
-The subresources being discarded must be in the RENDER\_TARGET state, or DEPTH\_WRITE state, for render targets/depth-stencil resources respectively, when [**ID3D12GraphicsCommandList::DiscardResource**](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-discardresource) is called.
+The subresources being discarded must be in the RENDER\_TARGET state, or DEPTH\_WRITE state, for render targets/depth-stencil resources respectively, when [**ID3D12GraphicsCommandList::DiscardResource**](resource-operations.md#discardresource) is called.
 
 <a id="legacy-aliasing"></a>
 

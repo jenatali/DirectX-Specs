@@ -1393,6 +1393,8 @@ The above concept still holds when using coarse pixel shading. When coarse shadi
 
 ## Programmable sample positions
 
+The full ordinary [copy](resource-operations.md#copy-commands), [clear](resource-operations.md#clear-commands) and [resolve](resource-operations.md#resolve-commands) entries link these operation-specific sample-pattern requirements. Format/region/capability rules do not erase the source/destination depth-pattern identity defined here.
+
 The rules below add sample-pattern requirements to operations that are otherwise valid under their own API/resource contracts. They do not expand the allowed copy regions, formats, resource states/layouts or resolve modes.
 
 <a id="sample-position-coordinates"></a>
