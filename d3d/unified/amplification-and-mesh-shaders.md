@@ -245,10 +245,9 @@ void DispatchMesh(
 ### Behavior
 
 DispatchMesh launches the threadgroups for the amplification shader or the mesh shader in a case where no amplification shader is attached.
-Each of the three thread group counts must be less than 64k and the product of ThreadGroupCountX\*ThreadGroupCountY\*ThreadGroupCountZ
-must be less than 2^22 (at most 4,194,303).
+The API group counts follow the [shared mesh grid limits](compute.md#shared-grid-limits), including the capability-conditioned one-dimensional X limit and independent 22-bit total.
 
-If there is an amplification shader, it will internally use an HLSL version of DispatchMesh with the same size limits to launch mesh shaders.
+If there is an amplification shader, it will internally use an HLSL version of DispatchMesh to launch child mesh groups; the separate [AS-child grid scope](compute.md#shared-grid-limits) applies.
 
 ### Parameters
 
@@ -706,7 +705,7 @@ This structure must have system-value or user-defined semantics defined for all 
 `SV_RenderTargetArrayIndex` and `SV_ViewportArrayIndex` and [`SV_CullPrimitive`](#sv_cullprimitive)
 can only be per-primitive attributes in a mesh shader.
 
-`SV_ShadingRate` is subject to the mesh-specific capability below and the [per-primitive VRS rules](../VariableRateShading.md#per-primitive-attribute), including their viewport-indexing and combiner restrictions. When set from a mesh shader, `SV_ShadingRate` functions as an actual per-primitive attribute-- not, say, a per-provoking-vertex attribute.
+`SV_ShadingRate` is subject to the mesh-specific capability below and the [per-primitive VRS rules](pixel-shaders.md#vrs-primitive), including their viewport-indexing and combiner restrictions. When set from a mesh shader, `SV_ShadingRate` functions as an actual per-primitive attribute-- not, say, a per-provoking-vertex attribute.
 
 Writing to this array must occur after the [`SetMeshOutputCounts`](#setmeshoutputcounts) call.
 See that section for information on output size and indexing behavior and restrictions.
@@ -839,9 +838,7 @@ The intended use is to have the whole group of threads cooperate on constructing
 It also means that you cannot amplify the number of unique MeshPayload contents
 beyond the number of Amplification shader groups launched by the API.
 
-Each of the three thread group counts must be less than 64k and the product of
-ThreadGroupCountX\*ThreadGroupCountY\*ThreadGroupCountZ  must be less than 2^22 (at most 4,194,303),
-or behavior is undefined.
+The child group counts follow the [shared mesh grid limits](compute.md#shared-grid-limits), including the expanded one-dimensional X capability and independent 22-bit total. Violating those constraints produces undefined behavior.
 
 A payload of data passed to all instances of Mesh shaders invoked by this
 call is passed through the MeshPayload parameter.
@@ -960,6 +957,8 @@ to be shared with the mesh shader as well.
 
 ## Derivatives and quad operations
 
+These stage-specific derivatives feed the shared [LOD/anisotropy calculation](common-shader-internals.md#lod-and-anisotropy) and [sampling/addressing precision rules](common-shader-internals.md#sampling-precision). The common texture algorithm does not change this stage's quad formation or participating-lane requirements.
+
 Derivative and derivative-dependent texture sample operations must be supported
 in compute shaders
 on devices that support `D3D_SHADER_MODEL_6_6`.
@@ -971,7 +970,7 @@ and have the `DerivativesInMeshAndAmplificationShadersSupported` capability.
 
 Quad read operations require the applicable shader model and `WaveOps` support; their availability does not by itself permit derivative-dependent sampling.
 
-For derivative operations, `numthreads` must have X divisible by four with Y=Z=1 (1D quads), or X and Y both divisible by two (2D quads). Other group shapes are invalid for these operations. The [quad layouts and lane mapping](../HLSL_SM_6_6_Derivatives.md#thread-groups-and-quads) define the exact 1D/2D mapping; the [derivative and texture-operation definitions](../HLSL_SM_6_6_Derivatives.md#added-functions) define the available operations. These are shader-model/capability conditions, not additional restrictions on every mesh dispatch.
+For derivative operations, `numthreads` must have X divisible by four with Y=Z=1 (1D quads), or X and Y both divisible by two (2D quads). Other group shapes are invalid for these operations. The [quad layouts and lane mapping](compute.md#compute-quads) define the exact 1D/2D mapping; the [derivative and texture-operation definitions](../HLSL_SM_6_6_Derivatives.md#added-functions) define the available operations. These are shader-model/capability conditions, not additional restrictions on every mesh dispatch.
 
 <a id="rasterization-order"></a>
 

@@ -487,6 +487,8 @@ A nonempty input layout requires the root signature's `D3D12_ROOT_SIGNATURE_FLAG
 
 ### Blend and output formats
 
+These descriptions select the [output-merger blend/logic behavior](output-merger.md#blending), including [dual-source requirements](output-merger.md#dual-source-blending), [precision](output-merger.md#blending-precision), [write masks](output-merger.md#write-masks) and [alpha-to-coverage](output-merger.md#alpha-to-coverage). Description/PSO creation and compatibility remain defined here.
+
 #### D3D12_BLEND
 
 ```cpp
@@ -793,25 +795,25 @@ Determines if a triangle is front- or back-facing. If this member is **TRUE**, a
 
 `DepthBias`
 
-Depth value added to a given pixel. For info about depth bias, see [Depth Bias](https://learn.microsoft.com/en-us/windows/desktop/direct3d11/d3d10-graphics-programming-guide-output-merger-stage-depth-bias).
+Depth value added to a given pixel. For info about depth bias, see [Depth Bias](rasterization.md#depth-bias).
 
 `DepthBiasClamp`
 
-Maximum depth bias of a pixel. For info about depth bias, see [Depth Bias](https://learn.microsoft.com/en-us/windows/desktop/direct3d11/d3d10-graphics-programming-guide-output-merger-stage-depth-bias).
+Maximum depth bias of a pixel. For info about depth bias, see [Depth Bias](rasterization.md#depth-bias).
 
 `SlopeScaledDepthBias`
 
-Scalar on a given pixel's slope. For info about depth bias, see [Depth Bias](https://learn.microsoft.com/en-us/windows/desktop/direct3d11/d3d10-graphics-programming-guide-output-merger-stage-depth-bias).
+Scalar on a given pixel's slope. For info about depth bias, see [Depth Bias](rasterization.md#depth-bias).
 
 `DepthClipEnable`
 
 Specifies whether to enable clipping based on distance.
 
-The depth-clipping selector does not disable the other required clipping stages; detailed clipping and line algorithms are defined by [rasterization](../archive/D3D11_3_FunctionalSpec.htm#Rasterizer).
+The depth-clipping selector does not disable the other required clipping stages; detailed clipping and line algorithms are defined by [rasterization](rasterization.md#clipping).
 
 `MultisampleEnable`
 
-Specifies whether to use the quadrilateral or alpha line anti-aliasing algorithm on multisample antialiasing (MSAA) render targets. Set to **TRUE** to use the quadrilateral line anti-aliasing algorithm and to **FALSE** to use the alpha line anti-aliasing algorithm. See the [line-mode description](#versioned-rasterizer).
+Selects the line algorithm together with AntialiasedLineEnable; the [line-mode description](#versioned-rasterizer) links the full interpretation. This field does not enable or disable point/triangle multisampling.
 
 `AntialiasedLineEnable`
 
@@ -842,13 +844,15 @@ To set the initial dynamic depth bias state, `D3D12_RASTERIZER_DESC1` has a `FLO
 
 `D3D12_RASTERIZER_DESC2` replaces the two legacy line-selection BOOLs with `LineRasterizationMode`. `D3D12_FEATURE_DATA_D3D12_OPTIONS19` reports `RasterizerDesc2Supported` indicating that the struct itself is supported, and `NarrowQuadrilateralLinesSupported` indicating that `D3D12_LINE_RASTERIZATION_MODE_QUADRILATERAL_NARROW` can be used.
 
-The legacy combination maps FALSE/FALSE to aliased lines, FALSE/TRUE to alpha-antialiased lines, and TRUE with either antialias flag to wide quadrilateral lines. `D3D12_RASTERIZER_DESC2` selects these modes explicitly and adds narrow quadrilateral selection when supported. This is a state-selection contract, not a replacement definition of line coverage or depth bias.
+The [rasterization line-mode table](rasterization.md#line-mode-selection) defines the legacy Boolean combinations and explicit enum selection, including wide/narrow coverage. These are interpretation rules for the selected rasterizer description; PSO availability and capability gates remain here.
 
-Enabling conservative rasterization requires a supported `D3D12_FEATURE_DATA_D3D12_OPTIONS.ConservativeRasterizationTier`. Its [fill-mode restriction](../ConservativeRasterization.md#fill-modes-interaction), [topology interaction](../ConservativeRasterization.md#ia-primitive-topology-interaction) and [coverage rules](../ConservativeRasterization.md#rasterization-rules-interaction) remain part of that feature contract, not a consequence of the ON enumerant merely existing.
+Enabling conservative rasterization requires a supported `D3D12_FEATURE_DATA_D3D12_OPTIONS.ConservativeRasterizationTier`. Its [fill-mode restriction](rasterization.md#conservative-fill-modes-interaction), [topology interaction](rasterization.md#conservative-ia-primitive-topology-interaction) and [coverage rules](rasterization.md#conservative-rasterization-rules-interaction) remain part of that feature contract, not a consequence of the ON enumerant merely existing.
 
 <a id="depth-stencil"></a>
 
 ### Depth/stencil descriptions
+
+The selected fields control the [output-merger depth/stencil algorithms](output-merger.md#depth-stencil), [per-face stencil/reference interaction](output-merger.md#independent-stencil), [depth bounds](output-merger.md#depth-bounds) and [read-only-view write gating](output-merger.md#read-only-depth-stencil). Their dynamic setter contracts are in [Output merger](output-merger.md#output-apis); canonical reset/bundle values remain in Command-list state.
 
 #### D3D12_DEPTH_WRITE_MASK
 
@@ -1420,7 +1424,7 @@ Active shader stages within one graphics PSO must not mix DXBC and DXIL bytecode
 
 ### Sample configuration without output attachments
 
-When `NumRenderTargets == 0` and `DSVFormat == DXGI_FORMAT_UNKNOWN`, the valid multisample counts are reported by `D3D12_FEATURE_DATA_D3D12_OPTIONS19.SupportedSampleCountsWithNoOutputs`, not a format-specific quality query. Bit n represents sample count `2^n`; a value of 1 reports single-sample-only support. Counts greater than one require their reported bit.
+When `NumRenderTargets == 0` and `DSVFormat == DXGI_FORMAT_UNKNOWN`, the valid multisample counts are reported by `D3D12_FEATURE_DATA_D3D12_OPTIONS19.SupportedSampleCountsWithNoOutputs`, not a format-specific quality query. Bit n represents sample count `2^n`; a value of 1 reports single-sample-only support. Counts greater than one require their reported bit. Rasterization defines the [no-output sample-frequency path and mandatory capability floor](rasterization.md#no-output-samples).
 
 D3D12 allows `DXGI_SAMPLE_DESC::Count` to be > 1 when no render targets or depth stencil are bound. In this case, rasterization behaves as with setting `ForcedSampleCount` > 1, except that sample-frequency pixel shader execution is allowed and well-defined. `DXGI_SAMPLE_DESC::Quality` must be 0 or `D3D12_STANDARD_MULTISAMPLE_PATTERN`. When programmable sample positions are set on the command list, those sample positions are used by this type of rendering as well.
 

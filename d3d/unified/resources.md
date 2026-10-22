@@ -122,7 +122,21 @@ Placement requirements are defined by [`CreatePlacedResource`](resources.md#crea
 
 ### Reserved resources
 
+Shader [mapping-status feedback](common-shader-internals.md#mapping-feedback) and [sampler-feedback usage recording](common-shader-internals.md#sampler-feedback) have distinct meanings. Neither maps tiles, establishes residency nor synchronizes a mapping change.
+
 On their creation, only a virtual address range is allocated and not mapped to any heap. The application will map such resources to heaps later. Such resources can be mapped to a heap at a 64KB tile granularity with `UpdateTileMappings`.
+
+<a id="arrayed-packed-mips"></a>
+
+#### Arrayed packed mips and Tier 4
+
+Tiers 2 and 3 support arrayed, mipped tiled resources, but not resources combining more than one array slice with any mipmap having a dimension smaller than the corresponding standard tile extent for its format. Such small levels require packed mips.
+
+Tiled resources Tier 4 includes Tier 3 behavior and permits `64KB_UNDEFINED_SWIZZLE` texture arrays with a full mip chain, including packed levels. This contribution does not apply to `64KB_STANDARD_SWIZZLE`.
+
+Existing resource creation, `GetResourceTiling` and tile-mapping APIs operate on these resources without new method signatures. `D3D12_TILED_RESOURCES_TIER_4` reports support. Drivers report the tier through `D3D12DDI_TILED_RESOURCES_TIER_0117_4` starting at DDI version 0117; reporting the tier requires supporting and testing this resource shape.
+
+The creation/runtime/debug-layer restrictions on arrayed packed-mip resources are relaxed only when the applicable Tier 4 support is exposed. The ordinary layout, resource description and mapping/synchronization requirements still apply.
 
 <a id="resource-heap-allocation"></a>
 

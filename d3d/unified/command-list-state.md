@@ -224,6 +224,8 @@ The stream-output filled-size counter and UAV counters are resource data, not bi
 
 ## Output bindings
 
+The full [OMSetRenderTargets contract](output-merger.md#omsetrendertargets) defines attachment binding; the [blend-factor](output-merger.md#omsetblendfactor), [common stencil-reference](output-merger.md#omsetstencilref), [independent stencil-reference](output-merger.md#omsetfrontandbackstencilref) and [depth-bounds](output-merger.md#omsetdepthbounds) entries define their dynamic calls. The initial/reset/bundle rules in this chapter remain canonical.
+
 **Related APIs:** `ID3D12GraphicsCommandList::OMSetRenderTargets`.
 
 A direct recording starts with no render targets or depth/stencil view bound. Bundles inherit the parent output bindings and cannot call `OMSetRenderTargets`. Render-pass entry/exit has its own explicit rules in [Render passes](#render-pass); it must not be treated as restoring the pre-pass outputs.
@@ -300,7 +302,7 @@ matching `ForcedSampleCount` value in the `RASTERIZER_DESC`.
 
 `SetSamplePositions` also impacts Resolve*() and Clear*() APIs called on
 depth surfaces (does not impact stencil), as well as certain resource
-state transition calls -- see [sample-position operational semantics](../ProgrammableSamplePositions.md#sample-position-operational-semantics).
+state transition calls -- see [sample-position operational semantics](rasterization.md#programmable-samples).
 
 Calling `SetSamplePositions(0,0,NULL)` reverts state back to the default.
 
@@ -412,6 +414,8 @@ Creation/Reset and `ClearState` select no protected-resource session on command 
 <a id="render-pass"></a>
 
 ## Render passes
+
+Complete [BeginRenderPass](output-merger.md#beginrenderpass) and [EndRenderPass](output-merger.md#endrenderpass) entries, [attachment access/flow](output-merger.md#render-pass-access) and [recording restrictions](output-merger.md#render-pass-recording) are defined by Output merger. Pass entry/exit and inherited/undefined binding state remain defined here.
 
 **Related APIs:** `ID3D12GraphicsCommandList4::BeginRenderPass`, `ID3D12GraphicsCommandList4::EndRenderPass`.
 

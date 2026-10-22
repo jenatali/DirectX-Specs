@@ -384,6 +384,8 @@ An `R32_UINT` UAV can reinterpret a UAV-eligible texture created with `R10G10B10
 
 ### Explicit castable-format lists
 
+The permitted integer aliases are used by [raw gather](common-shader-internals.md#raw-gather) for bitwise element retrieval. That shader operation does not replace the resource/view cast-list creation and compatibility requirements here.
+
 D3D12 provides an API at resource creation to specify a list of castable formats for the resource.
 
 The list
@@ -806,6 +808,8 @@ For typed buffer views, `FirstElement` and `NumElements` count format elements a
 <a id="texture-srv"></a>
 
 ### Texture SRV fields
+
+The shader uses these view fields through the [common texture-access model](common-shader-internals.md#texture-loads). [Resource-relative LOD clamps](common-shader-internals.md#resource-lod-clamp) define fractional and empty-set behavior; the view description here remains the owner of field representation and validation.
 
 `MostDetailedMip`
 
@@ -1262,6 +1266,8 @@ The remaining RTV variants use the corresponding declared mip and array selector
 <a id="dsv-types"></a>
 
 ### Depth-stencil view types and fields
+
+Depth/stencil view flags participate in the [output-merger read-only write controls](output-merger.md#read-only-depth-stencil). [Render-pass read-only binding](output-merger.md#read-only-depth-stencil-pass) has additional flag/access conditions; descriptor creation here does not erase the resource's access/layout requirements.
 
 #### D3D12_DSV_DIMENSION
 
@@ -1893,7 +1899,7 @@ For purposes of sampler feedback, creates a descriptor suitable for binding.
 >
 > Outside of bindings, however, a resource may be used for writing feedback to different feedback maps and a single feedback map may be repurposed to contain feedback for different resources. That is to say, outside of bindings the pairing need not be exclusive.
 
-At least one of `pTargetedResource` and `pFeedbackResource` must be non-null. When both are present, their logical width, height, mip count and array size must match the feedback pairing requirements. The feedback resource uses one of the opaque sampler-feedback formats; [feedback resource creation](resources.md#extended-description) still applies. `D3D12_FEATURE_DATA_D3D12_OPTIONS7.SamplerFeedbackTier` must report sampler-feedback support, as defined by the [feature capability](../SamplerFeedback.md#feature-support). A permitted null resource parameter is not an uninitialized descriptor binding.
+At least one of `pTargetedResource` and `pFeedbackResource` must be non-null. When both are present, their logical width, height, mip count and array size must match the feedback pairing requirements. The feedback resource uses one of the opaque sampler-feedback formats; [feedback resource creation](resources.md#extended-description) still applies. `D3D12_FEATURE_DATA_D3D12_OPTIONS7.SamplerFeedbackTier` must report sampler-feedback support, as defined by the [feature capability](common-shader-internals.md#feedback-capability-tiers). A permitted null resource parameter is not an uninitialized descriptor binding.
 
 Feedback map UAVs may be created against a NULL paired texture. Writes through a feedback UAV descriptor created with a NULL paired texture have no effect.
 

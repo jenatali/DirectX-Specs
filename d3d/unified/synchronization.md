@@ -1991,6 +1991,8 @@ Example: An application can create a 2D render target texture array with 2 array
 
 ### Render-pass dependencies
 
+Render-pass [attachment access declarations](output-merger.md#render-pass-access), [surface flow](output-merger.md#surface-flow-between-passes), [ending resolves](output-merger.md#render-pass-resolve) and [recording rules](output-merger.md#render-pass-recording) define the operations whose dependencies are synchronized here. A pass access declaration does not implicitly replace these barrier/layout requirements.
+
 An application may not use a barrier to consume writes
 that occurred within the same render pass. This disallows certain
 barriers, for example from `RENDER_TARGET` to `SHADER_RESOURCE` on the

@@ -386,6 +386,8 @@ The canonical [initial binding state](command-list-state.md#initial-bindings), [
 
 ### Table indexing and descriptor lifetime
 
+Descriptor/range selection here feeds the [shared resource-operation model](common-shader-internals.md#resource-access). Coordinate interpretation, access families and derivative/quad requirements are distinct from descriptor lifetime and indexing policy.
+
 Descriptor tables, each identifying a range in a descriptor heap, are
 bound at slots defined by the current root signature on a command list /
 bundle.
@@ -1352,6 +1354,8 @@ since modification and subsequent use require the applicable [synchronization](s
 <a id="samplers"></a>
 
 ## Static and dynamic samplers
+
+The [common sampler/filtering model](common-shader-internals.md#sampler-model) defines how these fields select texels, mip levels and filter results. Its [non-normalized coordinate rules](common-shader-internals.md#non-normalized-coordinates) and [point-mip anisotropic behavior](common-shader-internals.md#anisotropic-point-mip) supply the corresponding execution contracts. Sampler descriptions, root-signature representation and creation remain defined here.
 
 Many applications only need a fixed set of samplers, and these are often
 common across many pipeline states.  Another view of this is that it
