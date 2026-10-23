@@ -289,7 +289,7 @@ Command list processing does not proceed further until all records in the `Dispa
 
 It is invalid for command lists that reference the same work graph backing memory to be submitted to multiple device queues such that they might run in parallel.  Behavior is undefined in this case.
 
-The work-graph completion and [backing-memory restrictions](../WorkGraphs.md#backing-memory) are additional operation contracts; merely submitting its input records does not prove execution completion. [Acceleration-structure writes/reads](../Raytracing.md#synchronizing-acceleration-structure-memory-writesreads) use the fixed-resource and UAV-equivalence rules below. Mesh/amplification shading belongs to the vertex-shading scope; listing ordinary draw entry points does not exclude the [mesh dispatch operation](amplification-and-mesh-shaders.md#dispatchmesh). These references concern D3D12 operation/memory contracts, not shader-language barrier instructions.
+The work-graph completion and [backing-memory restrictions](state-objects.md#backing-memory) are additional operation contracts; merely submitting its input records does not prove execution completion. [Acceleration-structure writes/reads](../Raytracing.md#synchronizing-acceleration-structure-memory-writesreads) use the fixed-resource and UAV-equivalence rules below. Mesh/amplification shading belongs to the vertex-shading scope; listing ordinary draw entry points does not exclude the [mesh dispatch operation](amplification-and-mesh-shaders.md#dispatchmesh). These references concern D3D12 operation/memory contracts, not shader-language barrier instructions.
 
 <a id="barrier-access"></a>
 
@@ -413,6 +413,8 @@ Indicates a buffer is accessible as a stream output target.
 
 Indicates a buffer is accessible as an indirect argument buffer.
 
+Indirect argument and count storage, producer writes and enhanced/legacy consumer access are connected by [argument initialization and synchronization](indirect-execution.md#argument-initialization). [ExecuteIndirect](indirect-execution.md#executeindirect) defines the record/count interpretation; it does not replace the dependency rules here.
+
 ##### D3D12_BARRIER_ACCESS_PREDICATION
 
 Indicates a buffer is accessible as a predication buffer.
@@ -468,6 +470,8 @@ Indicates a resource is accessible for read-only access in a video encode queue.
 ##### D3D12_BARRIER_ACCESS_VIDEO_ENCODE_WRITE
 
 Indicates a resource is accessible for write access in a video encode queue.
+
+[AS recording and resource-use contracts](acceleration-structures.md#recording-contexts) connect build, copy and postbuild operations to the accesses and scopes here. [Program selection and backing initialization](state-objects.md#selection) retain their operation-specific resource requirements; they do not establish a new general memory model or replace the dependency rules here.
 
 <a id="barrier-layout"></a>
 

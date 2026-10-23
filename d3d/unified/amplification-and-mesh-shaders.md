@@ -274,7 +274,7 @@ typedef struct D3D12_DISPATCH_MESH_ARGUMENTS
 } D3D12_DISPATCH_MESH_ARGUMENTS;
 ```
 
-`D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH` selects a mesh-dispatch action in a command signature. Its argument data is the three `UINT` fields of `D3D12_DISPATCH_MESH_ARGUMENTS`, not a union member added to `D3D12_INDIRECT_ARGUMENT_DESC`. A dispatch-only argument record occupies 12 bytes; the command signature's `ByteStride` covers all its argument data and may include padding. The [indirect execution contract](../IndirectDrawing.md) defines signature/root-argument construction, buffer/count limits, execution and post-operation state. The mesh-dispatch argument itself clears no bindings; signature-modified arguments retain their canonical clearing rules. Indirect dispatch uses the same mesh pipeline and dispatch dimension constraints as direct dispatch.
+`D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH` selects a mesh-dispatch action in a command signature. Its argument data is the three `UINT` fields of `D3D12_DISPATCH_MESH_ARGUMENTS`, not a union member added to `D3D12_INDIRECT_ARGUMENT_DESC`. A dispatch-only argument record occupies 12 bytes; the command signature's `ByteStride` covers all its argument data and may include padding. The [indirect execution contract](indirect-execution.md#executeindirect) defines signature/root-argument construction, buffer/count limits, execution and post-operation state. The mesh-dispatch argument itself clears no bindings; signature-modified arguments retain their canonical clearing rules. Indirect dispatch uses the same mesh pipeline and dispatch dimension constraints as direct dispatch.
 
 <a id="thread-groups"></a>
 

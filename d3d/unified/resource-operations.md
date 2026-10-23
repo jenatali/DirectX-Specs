@@ -1444,6 +1444,8 @@ Float clears perform their defined numeric conversion, including clamping to the
 
 Copying the data resource does not implicitly copy a separate `pCounterResource`; copying a buffer range that includes counter storage does copy those bytes. Creation, binding and command-list reset do not initialize the counter value. Counter placement/alignment and shader counter operations retain their named owners rather than a new lifecycle or atomic memory model in this chapter.
 
+Using copied counter bytes to produce indirect control data follows [argument initialization](indirect-execution.md#argument-initialization). The [indirect command count](indirect-execution.md#executeindirect) counts records, not vertices, groups or stream-output bytes.
+
 <a id="clearunorderedaccessviewuint"></a>
 
 ### ID3D12GraphicsCommandList::ClearUnorderedAccessViewUint
@@ -2482,3 +2484,5 @@ Copy commands run on the GPU. Resource copies must not impose significant CPU wo
 The [physical-memory write guarantees](resources.md#hardware-memory-access) apply to copy/resolve destination texels and to descriptor-selected clears. Resource layout, tile residency/mapping, format support and aliasing requirements remain independent; a successful recording validation does not prove that an application supplied valid mappings, synchronization or descriptor lifetime.
 
 Driver unrestricted-pitch reporting uses `D3D12DDI_OPTIONS_DATA_0091` with `D3D12DDICAPS_TYPE_OPTIONS_0091`, available starting at `e_DDI_12_8_0091`. Cross-dimension texture-copy support is required for drivers reporting that DDI version or greater. Ordinary regional resolve/decompression uses the programmable-sample-position tier contract; feedback encode/decode retains the sampler-feedback tier and its opaque-format/transcode contract.
+
+Opaque acceleration-structure cloning, compaction, serialization and deserialization use [CopyRaytracingAccelerationStructure](acceleration-structures.md#copyraytracingaccelerationstructure), not the ordinary copy-operation definitions in this chapter.

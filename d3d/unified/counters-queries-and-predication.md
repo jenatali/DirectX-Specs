@@ -341,7 +341,7 @@ The number of primitives (that is, points, lines, and triangles) that were actua
 
 If the stream output resource is large enough, then *PrimitivesStorageNeeded* represents the total number of primitives written to the stream output resource. Otherwise, it represents the total number of primitives that *would* have been written to the stream-output resource had there been enough space for them all.
 
-`D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0` through `D3D12_QUERY_TYPE_SO_STATISTICS_STREAM3` select per-stream statistics from a `D3D12_QUERY_HEAP_TYPE_SO_STATISTICS` heap. These primitive counts are distinct from the filled-size byte value and GS emission limits. `BeginQuery` and `EndQuery` define the measured interval; `ResolveQueryData` makes its result available. Unequal written and storage-needed results indicate insufficient capture storage. Predicate and [indirect execution](../IndirectDrawing.md) use their own buffer/operation contracts.
+`D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0` through `D3D12_QUERY_TYPE_SO_STATISTICS_STREAM3` select per-stream statistics from a `D3D12_QUERY_HEAP_TYPE_SO_STATISTICS` heap. These primitive counts are distinct from the filled-size byte value and GS emission limits. `BeginQuery` and `EndQuery` define the measured interval; `ResolveQueryData` makes its result available. Unequal written and storage-needed results indicate insufficient capture storage. Predicate and [indirect execution](indirect-execution.md#argument-initialization) use their own buffer/operation contracts.
 
 These counters measure complete primitives per stream, not filled-size bytes. Stream overflow, whole-primitive write suppression and independence between streams are defined by [SO capture behavior](geometry-shaders-and-stream-output.md#overflow-and-statistics). A comparison of the two interval results can detect insufficient storage; there is no separate D3D12 SO-overflow predicate query object.
 
@@ -1446,16 +1446,16 @@ The [truth table](#predication), [state/access restrictions](#predicate-state) a
 | `ID3D12CommandListFenceBarriers::SignalBarrier` | unpredicated | On the independently supported list types. |
 | `ID3D12CommandListFenceBarriers::WaitBarrier` | unpredicated | On the independently supported list types. |
 | `ID3D12GraphicsCommandList10::DispatchGraph` | predicated | DIRECT/COMPUTE; not BUNDLE. |
-| `ID3D12GraphicsCommandList10::SetProgram` | unpredicated | Program selection and optional work-graph backing-memory initialization. |
+| [`ID3D12GraphicsCommandList10::SetProgram`](state-objects.md#setprogram) | unpredicated | Program selection and optional work-graph backing-memory initialization. |
 | `ID3D12GraphicsCommandList1::AtomicCopyBufferUINT` | predicated | Predication applies on DIRECT/COMPUTE; COPY does not support predicate selection. |
 | `ID3D12GraphicsCommandList1::AtomicCopyBufferUINT64` | predicated | Predication applies on DIRECT/COMPUTE; COPY does not support predicate selection. |
 | `ID3D12GraphicsCommandList1::ResolveSubresourceRegion` | predicated | DIRECT. |
 | `ID3D12GraphicsCommandList2::WriteBufferImmediate` | predicated | On permitted list types; COPY has no supported predicate selection. |
 | `ID3D12GraphicsCommandList4::BeginRenderPass` | wrapper | DIRECT. Translated beginning-access CLEAR work honors the predicate; binding/barrier/boundary effects remain independent. |
-| `ID3D12GraphicsCommandList4::BuildRaytracingAccelerationStructure` | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
-| `ID3D12GraphicsCommandList4::CopyRaytracingAccelerationStructure` | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
+| [`ID3D12GraphicsCommandList4::BuildRaytracingAccelerationStructure`](acceleration-structures.md#buildraytracingaccelerationstructure) | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
+| [`ID3D12GraphicsCommandList4::CopyRaytracingAccelerationStructure`](acceleration-structures.md#copyraytracingaccelerationstructure) | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
 | `ID3D12GraphicsCommandList4::DispatchRays` | predicated | DIRECT/COMPUTE; BUNDLE only when that operation independently permits it. |
-| `ID3D12GraphicsCommandList4::EmitRaytracingAccelerationStructurePostbuildInfo` | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
+| [`ID3D12GraphicsCommandList4::EmitRaytracingAccelerationStructurePostbuildInfo`](acceleration-structures.md#emitraytracingaccelerationstructurepostbuildinfo) | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
 | `ID3D12GraphicsCommandList4::EndRenderPass` | wrapper | DIRECT. Translated ending-access RESOLVE work honors the predicate; boundary/synchronization effects remain independent. |
 | `ID3D12GraphicsCommandList4::ExecuteMetaCommand` | conditional | Permitted command-list types and the selected meta-command's contract. Execution predicate behavior depends on the meta-command contract; state-damage flags do not specify it. |
 | `ID3D12GraphicsCommandList4::InitializeMetaCommand` | unpredicated | Permitted command-list types and the selected meta-command's contract. |
@@ -1477,7 +1477,7 @@ The [truth table](#predication), [state/access restrictions](#predicate-state) a
 | `ID3D12GraphicsCommandList::DrawInstanced` | predicated | DIRECT; permitted BUNDLE operations use the inherited predicate. |
 | `ID3D12GraphicsCommandList::EndQuery` | unpredicated | Only the query/list/heap combinations in the support tables. |
 | `ID3D12GraphicsCommandList::ExecuteBundle` | wrapper | DIRECT executes BUNDLE. |
-| `ID3D12GraphicsCommandList::ExecuteIndirect` | wrapper | DIRECT/COMPUTE; restricted BUNDLE; signature-dependent. Eligible generated GPU work honors the predicate; required post-call state cleanup still occurs. |
+| [`ID3D12GraphicsCommandList::ExecuteIndirect`](indirect-execution.md#recording-contexts) | wrapper | DIRECT/COMPUTE; restricted BUNDLE; signature-dependent. Eligible generated GPU work honors the predicate; required post-call state cleanup still occurs. |
 | `ID3D12GraphicsCommandList::ResolveQueryData` | unpredicated | Only the query/list/heap combinations in the GPU resolution support table. |
 | `ID3D12GraphicsCommandList::ResolveSubresource` | predicated | DIRECT. |
 | `ID3D12GraphicsCommandList::ResourceBarrier` | unpredicated | On the independently supported list types. |

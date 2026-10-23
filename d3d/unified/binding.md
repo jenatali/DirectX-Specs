@@ -614,7 +614,7 @@ Root CBV addresses must satisfy `D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT`
 
 Acceleration structures are declared in HLSL via the
 [RaytracingAccelerationStructure](../Raytracing.md#raytracingaccelerationstructure)
-resource type, which can then be passed into [TraceRay()](../Raytracing.md#traceray) and [RayQuery::TraceRayInline()](../Raytracing.md#rayquery-tracerayinline).
+resource type, which can then be passed into [TraceRay()](../Raytracing.md#traceray) and [RayQuery::TraceRayInline()](ray-traversal.md#rayquery-tracerayinline).
 From the API, these are bound either:
 
 - via a descriptor heap based SRV with dimension
@@ -633,10 +633,10 @@ CreateShaderResourceView(NULL,pViewDesc).
 
 A NULL acceleration structure, meaning one bound to a shader as described here and used
 with any shader-visible trace entry point ([TraceRay()](../Raytracing.md#traceray),
-[RayQuery::TraceRayInline()](../Raytracing.md#rayquery-tracerayinline) or [HitObject::TraceRay()](../Raytracing.md#hitobject-traceray)),
+[RayQuery::TraceRayInline()](ray-traversal.md#rayquery-tracerayinline) or [HitObject::TraceRay()](../Raytracing.md#hitobject-traceray)),
 is a GPUVA of `0`.  This is distinct from an instance whose `AccelerationStructure` pointer is NULL,
 which is an inactive instance discarded at build time, see
-[Inactive primitives and instances](../Raytracing.md#inactive-primitives-and-instances).
+[Inactive primitives and instances](acceleration-structures.md#inactive-primitives-and-instances).
 
 For a root descriptor SRV this is an exception to the rule in
 [null descriptors](#null-descriptors), which states
@@ -729,7 +729,7 @@ signatures but must use the same global root signature. The "global"
 root signature is identical to the root signature used for compute state on
 command lists.
 
-Different sets of shaders collected together in a [State object](../Raytracing.md#state-objects),
+Different sets of shaders collected together in a [State object](state-objects.md#object-model),
 may have different global root signatures, as long as during a [DispatchRays()](../Raytracing.md#dispatchrays)
 call any shaders that get
 invoked use the same global root signature that is set on the CommandList
@@ -746,7 +746,7 @@ given shader.
 
 Note about static samplers: Local root signatures can define static
 samplers (just like global root signatures can), except that each local
-root signature used in a [Raytracing pipeline state object](../Raytracing.md#raytracing-pipeline-state-object)
+root signature used in a [Raytracing pipeline state object](state-objects.md#raytracing-pipeline-state-object)
 must define any static samplers it uses identically as other local root
 signatures that define the same ones. So if any local root signature makes
 a definition for, say, sampler s0, all local root signatures that define
@@ -755,6 +755,8 @@ static samplers across local root signature and global root signature
 must fit in the static sampler limit for D3D12's resource binding model.
 
 Work graphs use [global and node-local root arguments](../WorkGraphs.md#resource-bindings); node-local argument-table layout and dispatch remain part of the work-graph contract. Shared descriptor heaps and root-signature requirements are not independent copies of this binding model.
+
+[State-object associations](state-objects.md#subobject-association-behavior) determine which root-signature subobjects apply to each export, including defaults, direct-DXIL overrides and collection constraints. [Node-local table selection](state-objects.md#d3d12_set_work_graph_desc) defines the work-graph construction/selection interface; root representation remains defined here.
 
 <a id="signature-descriptions"></a>
 
@@ -2606,6 +2608,8 @@ root signature. That is accomplished by the [root-signature setters](#binding-ap
 Draw*()/Dispatch*() is invoked, the application must ensure that the
 current pipeline state matches the current root signature, otherwise
 behavior is undefined.
+
+Indirect root-argument changes use [command-signature parameter validation](indirect-execution.md#signature-validation). At execution, the selected root signature must [match the signature-associated root signature](indirect-execution.md#execute-debug); that requirement is distinct from pipeline/root compatibility.
 
 <a id="binding-apis"></a>
 

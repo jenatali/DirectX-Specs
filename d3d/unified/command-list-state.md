@@ -50,7 +50,7 @@ An available command-list interface does not by itself advertise optional hardwa
 | Dynamic strip cut | `OPTIONS15.DynamicIndexBufferStripCutSupported` and the dynamic PSO flag |
 | Dynamic depth bias | `OPTIONS16.DynamicDepthBiasSupported` and the dynamic PSO flag |
 | Work graphs | `OPTIONS21.WorkGraphsTier` appropriate to the program |
-| Generic programs | `D3D12_FEATURE_DATA_SHADER_MODEL.HighestShaderModel` at SM 6.8 or higher; see [generic-program availability](../WorkGraphs.md#generic-programs) |
+| Generic programs | `D3D12_FEATURE_DATA_SHADER_MODEL.HighestShaderModel` at SM 6.8 or higher; see [generic-program availability](state-objects.md#generic-programs) |
 | Directly indexed descriptor heaps | `D3D12_FEATURE_DATA_D3D12_OPTIONS.ResourceBindingTier` at Tier 3 and `D3D12_FEATURE_DATA_SHADER_MODEL.HighestShaderModel` at SM 6.6 or higher |
 | Protected-resource session | `D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT.Support` for the relevant `NodeIndex` |
 
@@ -76,30 +76,19 @@ All pipeline state objects referenced by a bundle must have the same number of r
 
 ### ID3D12GraphicsCommandList4::SetPipelineState1
 
-`SetPipelineState1` sets a state object on the command list. It can be called from graphics or
-compute command lists and bundles.
-
-This is an alternative to `SetPipelineState`
-which is only defined for graphics and compute shaders. There is only
-one pipeline state active on a command list at a time, so either call
-sets the current pipeline state. The distinction between the calls is
-each sets particular types of pipeline state only. `SetPipelineState1` is only for setting raytracing pipeline state.
+[SetPipelineState1](state-objects.md#setpipelinestate1) defines selection of a raytracing pipeline state object. Its effect on the single logical pipeline selection, initial/reset state and bundle postconditions remains defined above.
 
 <a id="set-program"></a>
 
 ### ID3D12GraphicsCommandList10::SetProgram
 
-`SetProgram` selects [programs](../WorkGraphs.md#program) represented by program identifiers.
-
-Work graphs can only be set within command lists of type `DIRECT` or `COMPUTE`.  `BUNDLE` is not supported given that bundles are meant to be reused across command lists, and the [backing memory](../WorkGraphs.md#backing-memory) for work graphs can't be used for parallel graph invocations.
+[SetProgram](state-objects.md#setprogram) defines program selection, typed descriptions and work-graph list restrictions. The selected program participates in the single logical pipeline selection defined above.
 
 <a id="work-graph-memory"></a>
 
 ### Work-graph backing memory
 
-The first time a work graph is used with a particular backing memory allocation, the flag `D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE` must be set so the system can prepare the opaque contents for use by graph execution.  This includes situations like reusing backing memory that is in an unknown state for whatever reason, such as if it was last used with a different work graph or for some other purpose.  This isn't needed for independent memory changes, like changes to the local root argument table or the contents of global root arguments.
-
-Rebinding a work graph after list `Reset` is not itself a request to reinitialize its backing allocation. `D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE` concerns the allocation's contents and previous use, not whether the command-list object has been reset. The [initialization flag's requirements](../WorkGraphs.md#d3d12_set_work_graph_flags) include synchronization with previous uses of that memory. `DispatchGraph`, like work-graph program selection, is not supported in bundles.
+Rebinding a work graph after list `Reset` is not itself a request to reinitialize its backing allocation. `D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE` concerns the allocation's contents and previous use, not whether the command-list object has been reset. The [initialization flag's requirements](state-objects.md#d3d12_set_work_graph_flags) include synchronization with previous uses of that memory. `DispatchGraph`, like work-graph program selection, is not supported in bundles.
 
 <a id="resource-binding"></a>
 
@@ -481,6 +470,8 @@ lists only if all of the following are true:
     nor contain VB/IB binding changes.
 
 These are post-ExecuteIndirect values for the affected slots only, not the initial validity of every root argument/table in a fresh recording. Unaffected bindings do not become cleared merely because ExecuteIndirect was called.
+
+Command-signature construction, argument/count buffers and execution are defined in [Indirect execution](indirect-execution.md#executeindirect). The [incrementing-constant argument](indirect-execution.md#incrementing-constant) sets one root constant and therefore resets that value to zero after the call. The affected-binding resets above also occur when no records execute or generated work is predicated off; unaffected bindings remain unchanged.
 
 <a id="meta-commands"></a>
 

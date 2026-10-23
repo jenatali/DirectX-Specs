@@ -354,6 +354,8 @@ None
 
 The draw uses the currently selected graphics state. A zero per-instance count or zero `InstanceCount` generates no primitives; it does not waive other recording-state requirements.
 
+The same draw-field meanings and traversal rules apply to the [non-indexed](indirect-execution.md#draw-arguments) and [indexed](indirect-execution.md#draw-indexed-arguments) indirect payloads. Command signatures, record layouts and argument/count-buffer execution have their canonical definition in [Indirect execution](indirect-execution.md#argument-records).
+
 <a id="address-generation"></a>
 
 ## Address generation and instancing

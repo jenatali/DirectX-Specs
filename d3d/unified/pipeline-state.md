@@ -18,6 +18,8 @@ The API imposes no fixed limit on the number of live pipeline state objects; cre
 
 [Initial/reset and bundle pipeline selection](command-list-state.md#pipeline-selection) and [dynamic state overrides](command-list-state.md#dynamic-state) are canonical command-list contracts. Root-signature selection and compatibility are defined by [Binding](binding.md#pipeline-compatibility); selecting a PSO does not bind root arguments or replace descriptor lifetime/synchronization requirements.
 
+[State objects](state-objects.md#object-model) define collections, libraries, subobject associations, linking and named executable programs. [Generic programs](state-objects.md#generic-programs) reuse the graphics/compute pipeline definitions here; their missing-subobject defaults are defined [with generic-program construction](state-objects.md#defaults-for-subobjects-missing-from-a-generic-program), not as command-list Reset defaults.
+
 <a id="descriptions"></a>
 
 ## Aggregate descriptions
@@ -1437,6 +1439,8 @@ Existing interactions with `ForcedSampleCount` remain:
 ### Execution compatibility
 
 Graphics, compute and mesh shader sets are not additive pipeline bindings. The selected program's root signature must satisfy [shader/root-signature compatibility](binding.md#pipeline-compatibility), and the selected PSO and command-list root signature must match when work is executed. Attachment descriptions require [format/sample support](formats.md#support) and compatible active views; passing one creation check does not waive descriptor, resource-lifetime or synchronization requirements.
+
+[Indirect work types](indirect-execution.md#work-types) select the graphics or compute root-argument bind point and retain their workload's pipeline requirements. [Command-signature root matching](indirect-execution.md#execute-debug) is separate from the pipeline/root compatibility rules here.
 
 <a id="cached-data"></a>
 
