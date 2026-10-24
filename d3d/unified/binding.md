@@ -614,7 +614,7 @@ Root CBV addresses must satisfy `D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT`
 
 Acceleration structures are declared in HLSL via the
 [RaytracingAccelerationStructure](../Raytracing.md#raytracingaccelerationstructure)
-resource type, which can then be passed into [TraceRay()](../Raytracing.md#traceray) and [RayQuery::TraceRayInline()](ray-traversal.md#rayquery-tracerayinline).
+resource type, which can then be passed into [TraceRay()](raytracing-pipelines.md#traceray) and [RayQuery::TraceRayInline()](ray-traversal.md#rayquery-tracerayinline).
 From the API, these are bound either:
 
 - via a descriptor heap based SRV with dimension
@@ -632,8 +632,8 @@ from the view description
 CreateShaderResourceView(NULL,pViewDesc).
 
 A NULL acceleration structure, meaning one bound to a shader as described here and used
-with any shader-visible trace entry point ([TraceRay()](../Raytracing.md#traceray),
-[RayQuery::TraceRayInline()](ray-traversal.md#rayquery-tracerayinline) or [HitObject::TraceRay()](../Raytracing.md#hitobject-traceray)),
+with any shader-visible trace entry point ([TraceRay()](raytracing-pipelines.md#traceray),
+[RayQuery::TraceRayInline()](ray-traversal.md#rayquery-tracerayinline) or [HitObject::TraceRay()](raytracing-pipelines.md#hitobject-traceray)),
 is a GPUVA of `0`.  This is distinct from an instance whose `AccelerationStructure` pointer is NULL,
 which is an inactive instance discarded at build time, see
 [Inactive primitives and instances](acceleration-structures.md#inactive-primitives-and-instances).
@@ -718,7 +718,7 @@ added root signature entries described above.
 For raytracing shaders, bindings can be defined by one or both of the
 following root signatures:
 
-- A *local* root signature, whose arguments come from [shader tables](../Raytracing.md#shader-tables), enabling each shader to have unique arguments.
+- A *local* root signature, whose arguments come from [shader tables](raytracing-pipelines.md#shader-tables), enabling each shader to have unique arguments.
 
 - A *global* root signature whose arguments are shared across all
   raytracing shaders and compute PSOs on CommandLists, set via
@@ -730,7 +730,7 @@ root signature is identical to the root signature used for compute state on
 command lists.
 
 Different sets of shaders collected together in a [State object](state-objects.md#object-model),
-may have different global root signatures, as long as during a [DispatchRays()](../Raytracing.md#dispatchrays)
+may have different global root signatures, as long as during a [DispatchRays()](raytracing-pipelines.md#id3d12graphicscommandlist4dispatchrays)
 call any shaders that get
 invoked use the same global root signature that is set on the CommandList
 as described above.
@@ -738,7 +738,7 @@ as described above.
 Unlike global root signatures, local root signatures have a larger limit
 on the number of entries they can hold, bounded by the maximum supported
 shader record stride of 4096 bytes, minus 32 bytes for shader identifier
-size = 4064 bytes max local root signature footprint. See [shader records](../Raytracing.md#shader-record).
+size = 4064 bytes max local root signature footprint. See [shader records](raytracing-pipelines.md#shader-record).
 
 The shader "register" bindings (e.g. t0, u0 etc.) specified by a local
 root signature can't overlap with those in a global root signature for a
@@ -754,9 +754,28 @@ s0 must use the same definition. Further, the total number of unique
 static samplers across local root signature and global root signature
 must fit in the static sampler limit for D3D12's resource binding model.
 
-Work graphs use [global and node-local root arguments](../WorkGraphs.md#resource-bindings); node-local argument-table layout and dispatch remain part of the work-graph contract. Shared descriptor heaps and root-signature requirements are not independent copies of this binding model.
+Work graphs use global and node-local root arguments. [State objects](state-objects.md#d3d12_set_work_graph_desc) defines the node-local argument-table binding and layout; [Work-graph execution](work-graphs.md#dispatchgraph) defines dispatch. Shared descriptor heaps and root-signature requirements are not independent copies of this binding model.
 
 [State-object associations](state-objects.md#subobject-association-behavior) determine which root-signature subobjects apply to each export, including defaults, direct-DXIL overrides and collection constraints. [Node-local table selection](state-objects.md#d3d12_set_work_graph_desc) defines the work-graph construction/selection interface; root representation remains defined here.
+
+<a id="raytracing-shader-visibility"></a>
+
+### Raytracing shader visibility
+
+Root signatures used with raytracing share command list state with
+compute, as described in [Local root signatures vs root signatures](binding.md#local-signatures). As such,
+the only root parameter shader visibility that applies is
+`D3D12_SHADER_VISIBILITY_ALL`, meaning the root arguments set as part
+of compute command list state are also visible to raytracing.
+
+Local root signatures can also only use `D3D12_SHADER_VISIBILITY_ALL`.
+
+In other words, for both root signatures and local root signatures,
+there's nothing interesting to narrow down with shader visibility flags
+-- local root arguments are simply always visible to all raytracing
+shaders (and compute for root signatures).
+
+The serialized layout of local-root arguments inside a shader record is defined with [shader-table memory initialization](raytracing-pipelines.md#shader-table-memory-initialization). The global root-cost accounting here is distinct from that record's full 64-bit descriptor/handle representation.
 
 <a id="signature-descriptions"></a>
 
@@ -1609,6 +1628,8 @@ typedef struct D3D12_STATIC_SAMPLER_DESC1
 <a id="sampler-fields"></a>
 
 ### Sampler fields
+
+In `D3D12_FILTER`, bits `[8:7]` encode the reduction type: `0` is standard filtering, `1` is comparison, `2` is minimum and `3` is maximum. These are the final sampler reduction modes; [minimum/maximum filtering behavior](common-shader-internals.md#minmax-filtering) remains defined with texture filtering.
 
 `Filter`
 

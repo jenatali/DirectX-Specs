@@ -30,9 +30,10 @@ the DXIL appendix supplies the complete behavior reference for every intrinsic.
 
 | Chapter | Current coverage |
 |---|---|
+| [Devices, feature levels and capabilities](devices-and-capabilities.md) | Adapter/device/node identity; ordinary and independent creation/configuration; runtime selection and SDK lifetime; feature queries, negotiation, capability catalog and driver reporting |
 | [Command recording and execution](execution.md) | Recording/lifecycle baseline; integrated core submission and fence contracts with flag/status, completion/lifetime and barrier interactions; bounded DDI coverage |
 | [Command-list state initialization](command-list-state.md) | Canonical creation/Reset state, bundle entry/exit, and explicit feature/operation contributions for the pinned graphics interfaces |
-| [Resources and memory](resources.md) | Resource/heap ownership and backing; descriptions, creation and allocation; memory budgets, residency, CPU mapping and driver responsibilities |
+| [Resources and memory](resources.md) | Resource/heap ownership, creation/allocation and residency; reserved/tiled resource shapes, packed mips, tier access, tiling queries and queue mappings; CPU mapping and driver responsibilities |
 | [Synchronization and barriers](synchronization.md) | Common foundations; enhanced barriers first; legacy states/barriers and promotion/decay; model interoperation and driver translation |
 | [Fence barriers](fence-barriers.md) | Barrier signals, scoped waits, capability and cache-coherency requirements, with common fence kinds defined in execution |
 | [Resource binding and root signatures](binding.md) | Descriptor heaps/tables/handles, root arguments and signature versions, static/data promises, direct indexing, sampler extensions, ordinary APIs and selected driver contracts |
@@ -54,3 +55,5 @@ the DXIL appendix supplies the complete behavior reference for every intrinsic.
 | [Acceleration structures](acceleration-structures.md) | BLAS/TLAS geometry and instances, representation/determinism, build/update/sizing, opaque storage and specialized copy/postbuild/serialization/matching; opacity-micromap construction/encoding/linkage, five APIs and published driver contracts |
 | [State objects](state-objects.md) | Shared collections/libraries/exports, subobjects and association/link rules; raytracing, work-graph and generic-program construction, incremental addition, selected properties/program identifiers, selection and published driver contracts |
 | [Ray traversal and inline raytracing](ray-traversal.md) | Ray descriptions/extents, fixed-function intersection/watertightness, mask/flag/opacity/OMM behavior, complete RayQuery state/operation model and shared stored-result concepts |
+| [Raytracing shader pipelines, tables and execution reordering](raytracing-pipelines.md) | Six shader stages, dynamic calls/payload qualifiers, identifiers/records/table indexing, DispatchRays, recursion/stack properties and full shipped HitObject/SER behavior, with published driver responsibilities |
+| [Work-graph execution](work-graphs.md) | Compute-node launch modes, typed/empty records, allocation/completion/sharing, graph budgets, CPU/GPU dispatch inputs, node/entrypoint reflection, published handoff and driver scheduling |

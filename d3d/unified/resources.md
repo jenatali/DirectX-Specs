@@ -188,6 +188,1618 @@ It's also important to note that currently, in DX12, creating a new heap (even i
 
 `ALLOW_RAW_VIEWS` and `BUFFER_STRUCTURED` are no longer required to be declared in D3D12. Instead, D3D12 buffers can be used as RAW Buffer SRVs without such up-front declaration. The structured buffer stride and the flags related to these features are specified by the view descriptor.
 
+<a id="tiled-resources"></a>
+
+## Reserved-resource tile organization
+
+Reserved resources separate a resource's virtual address range from its physical backing. Tile mappings select 64-KB pages in heaps; they do not copy resource contents. A resource can simultaneously map tiles from multiple heaps. Changing the heap used for one mapping does not clear unrelated mappings.
+
+[Heap creation and properties](#heap-properties), [residency](#residency), [GPU virtual address support](#tiled-virtual-address) and [resource lifetime](execution.md#lifetime) remain separate contracts. Heap memory must be resident when the GPU accesses it. Mapping a page is not a residency operation or a texture-metadata initialization.
+
+The [layout definition](#texture-layout), [resource description](#resource-description), [format support](formats.md#support) and [resource flags](#resource-flags) constrain reserved-resource creation. Texture1D reserved resources are not supported. Textures created by `CreateReservedResource`, `CreateReservedResource1` or `CreateReservedResource2` must use `D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE`. Tier 3 adds full Texture3D support; the [read-only volume capability](#tiled-tiers) is a separate contribution. Tier 4's arrayed packed-mip contribution is defined in [arrayed packed mips](#arrayed-packed-mips). Buffers use row-major layout; the tile shape is 65536 bytes.
+
+<a id="tiled-sparse-storage"></a>
+
+### Virtual reservation and sparse mapping storage
+
+Whereas a committed resource's storage is allocated in the system when the resource is created, for a Tiled Resource,
+the storage for the Resource contents is not allocated. Instead, when a Tiled Resource is created at the API, the system makes an address space reservation
+for the tiled surface's area only, and then allows the mapping of the tiles to be controlled by the application. The "mapping" of a tile is simply
+the physical location in memory that a logical tile in a resource points to (or NULL for an unmapped tile).
+This is not to be confused with the notion of mapping a D3D resource for CPU access, which despite using the same name is completely independent. Reserved resources cannot be CPU-mapped with `ID3D12Resource::Map`.
+The application can define and change the mapping of each tile individually as needed, knowing that all tiles for a surface don't need to be
+mapped at a time, thereby making effective use of the amount of memory available.
+
+The amount of storage associated with a Tiled Resource itself (independent of heap memory) should
+be roughly proportional to the number of tiles actually mapped to the heap at any given time. In hardware this boils down to scaling the
+memory footprint for page table storage roughly with the amount of tiles that are mapped (e.g. using a multilevel page table scheme as appropriate).
+
+Let us explore what storage the page table itself could require in the worst case (though in practice implementations should only require storage roughly proportional to what is mapped).
+
+Suppose each page table entry is 64 bits.
+
+For the **worst-case** page table size hit for a single surface, using the dimensions in this example, suppose a Tiled Resource is created with a 128 bit-per-element format (e.g. RGBA float),
+so a 64KB tile contains only 4096 pixels. A Texture2DArray of 16384\*16384\*2048 (but with only a single mipmap) would require about 1 GiB of storage in the
+page table if fully populated (not including mipmaps) using 64 bit table entries. Adding mipmaps would grow the fully-mapped (worst case) page table storage by about a third, to about 1.3 GiB.
+
+This would give access to about 10.6 TiB of addressable memory.
+
+Another case to consider is a single Texture2D Tiled Resource of 16384\*16384 with a 32 bit-per-element format, including mipmaps.
+The space needed in a fully populated page table would be roughly 171 KiB with 64 bit table entries.
+
+Finally, consider an example using a BC format, say BC7 with 128 bits per compression block of 4x4 pixels. That is one byte per pixel. A Texture2DArray of 16384\*16384\*2048 including mipmaps
+would require roughly 85.3 MiB to fully populate this memory in a page table. That is not bad considering this allows one Tiled Resource to span approximately 733 billion texels (approximately 683 GiB including mipmaps).
+
+In practice nowhere near these full mappings would be defined given that the amount of physical memory available wouldn't allow anywhere near that much to be mapped and referenced at a time anyway. With
+a heap, however, applications could choose to reuse tiles (as a simple example, reusing a "black" colored tile for large black regions in an image) - effectively using the heap
+(i.e. page table mappings) as a tool for memory compression.
+
+The initial contents of the page table are NULL for all entries. Applications also can't pass initial
+data for the memory contents of the surface since it starts off with no memory backing.
+
+The page-table examples assume 64-bit entries and a full mip chain where stated; they do not require a particular hardware page-table implementation. Resource dimensions, virtual address limits and residency budgets remain independent restrictions. Heaps are not resizable; additional heaps and mapping changes provide independently allocated backing.
+
+<a id="standard-tile-shapes"></a>
+
+### Standard tile shapes
+
+When a Tiled Resource is created, the dimensions, format element size and number of mipmaps and/or array slices (if applicable) determine
+the number of tiles that would be required to back the entire surface area. For `64KB_UNDEFINED_SWIZZLE`, the pixel/byte layout within tiles is implementation-chosen. The number of pixels that fit in a tile, depending on the format element size, is fixed and identical whether using standard swizzle or not.
+
+This means that the number of tiles that will be used by a given surface size and format element width is well defined/predictable based on the following tables.
+For Resources that contain mipmaps, or cases where surface dimensions don't fill a tile, however, there are some constraints, discussed in [mipmap packing](#tiled-mipmap-packing).
+
+The complete [shared-tile data compatibility and inheritance contract](#tiled-data-compatibility) defines compatible format/dimension cases, packed/nonpacked solid-color sharing, zero-filled inheritance and mapping-local metadata requirements.
+
+The layout of data within a tile does not depend on where the tile is mapped in a resource overall. So, for example, a tile can be reused in different locations of a surface at once with consistent behavior in all locations.
+
+#### Texture2D and texture arrays
+
+(not counting tail mip packing)
+
+| **Bits/Pixel (1 sample/pixel)** | **Tile Dimensions (Pixels, WxH)** |
+| --- | --- |
+| 8 | 256x256 |
+| 16 | 256x128 |
+| 32 | 128x128 |
+| 64 | 128x64 |
+| 128 | 64x64 |
+| BC1,4 | 512x256 |
+| BC2,3,5,6,7 | 256x256 |
+
+Other format bit counts not supported with Tiled Resources: 96bpp formats, video formats, R1_UNORM, R8G8_B8G8_UNORM, G8R8_G8B8_UNORM.
+
+| **Multisample Count** | **Divide Tile Dimensions Above by (WxH)** |
+| --- | --- |
+| 1 | 1x1 |
+| 2 | 2x1 |
+| 4 | 2x2 |
+| 8 | 4x2 |
+| 16 | 4x4 |
+
+The supported sample counts and quality levels are reported by the tiled-resource multisample query. The table specifies the shape scaling for each listed sample count; it does not assert support for that count.
+
+Tiled Resources with sample counts larger than 1 cannot use 128bpp formats.
+
+#### Texture3D
+
+| **Bits/Pixel (1 sample/pixel)** | **Tile Dimensions (Pixels, WxHxD)** |
+| --- | --- |
+| 8 | 64x32x32 |
+| 16 | 32x32x32 |
+| 32 | 32x32x16 |
+| 64 | 32x16x16 |
+| 128 | 16x16x16 |
+| BC1,4 | 128x64x16 |
+| BC2,3,5,6,7 | 64x64x16 |
+
+Other format bit counts not supported with Tiled Resources: 96bpp formats, video formats, R1_UNORM, R8G8_B8G8_UNORM, G8R8_G8B8_UNORM.
+
+<a id="tiled-volume-examples"></a>
+
+#### Three-dimensional traversal examples
+
+In the diagrams below, dark gray represents NULL tiles.
+
+- Texture 3D Tiled Resource default mapping (most detailed mip)
+- Texture 3D Tiled Resource default mapping (second most detailed mip)
+- Texture 3D Tiled Resource (most detailed mip)
+- Texture 3D Tiled Resource (second most detailed mip)
+- Texture 3D Tiled Resource (Offset Box)
+- Texture 3D Tiled Resource (Uniform Box)
+
+##### Texture 3D tiled resource default mapping (most-detailed mip)
+
+![default mapping of a tiled 3-dimensional resource](images/tiled-vtr-tex3d-default-1.png)
+
+##### Texture 3D tiled resource default mapping (second-most-detailed mip)
+
+![shows the second-most-detailed mip](images/tiled-vtr-tex3d-default-2.png)
+
+##### Texture 3D tiled resource (most-detailed mip)
+
+The following code sets up a 3D tiled resource at the most-detailed mip.
+
+```cpp
+D3D12_TILED_RESOURCE_COORDINATE trCoord{};
+trCoord.X = 1;
+trCoord.Y = 0;
+trCoord.Z = 0;
+trCoord.Subresource = 0;
+
+D3D12_TILE_REGION_SIZE trSize{};
+trSize.UseBox = false;
+trSize.NumTiles = 63;
+```
+
+![most-detailed mip for a three dimensional texture](images/tiled-vtr-tex3d-default-1b.png)
+
+##### Texture 3D tiled resource (second-most-detailed mip)
+
+The following code sets up a 3D tiled resource, and the second most detailed mip.
+
+```cpp
+D3D12_TILED_RESOURCE_COORDINATE trCoord{};
+trCoord.X = 1;
+trCoord.Y = 0;
+trCoord.Z = 0;
+trCoord.Subresource = 1;
+
+D3D12_TILE_REGION_SIZE trSize{};
+trSize.UseBox = false;
+trSize.NumTiles = 6;
+```
+
+![second-most-detailed mip for a three-dimensional texture](images/tiled-vtr-tex3d-default-2b.png)
+
+##### Texture 3D tiled resource (offset box)
+
+The following code selects a 3-by-3-by-3 box of tiles.
+
+```cpp
+D3D12_TILED_RESOURCE_COORDINATE trCoord{};
+trCoord.X = 1;
+trCoord.Y = 1;
+trCoord.Z = 1;
+trCoord.Subresource = 0;
+
+D3D12_TILE_REGION_SIZE trSize{};
+trSize.UseBox = true;
+trSize.NumTiles = 27;
+trSize.Width = 3;
+trSize.Height = 3;
+trSize.Depth = 3;
+```
+
+![a three-by-three-by-three tile box](images/tiled-vtr-tex3d-single.png)
+
+##### Texture 3D tiled resource (uniform box)
+
+The following code sets up a uniform box tiled resource.
+
+```cpp
+D3D12_TILED_RESOURCE_COORDINATE trCoord{};
+trCoord.X = 0;
+trCoord.Y = 1;
+trCoord.Z = 0;
+trCoord.Subresource = 0;
+
+D3D12_TILE_REGION_SIZE trSize{};
+trSize.UseBox = true;
+trSize.NumTiles = 27;
+trSize.Width = 3;
+trSize.Height = 3;
+trSize.Depth = 3;
+```
+
+![a uniform box](images/tiled-vtr-tex3d-uniform.png)
+
+#### Buffers
+
+A Buffer Resource is trivially divided into 64KB tiles, with some empty space in the last tile if the size is not a multiple of 64KB.
+
+Structured Buffers must have no constraint on the Stride to be Tiled, however possible performance optimizations in hardware
+for using Structured Buffers may be sacrificed by making them Tiled in the first place.
+
+Typed buffer views on a tiled resource don't support 96bpp formats, video formats, R1_UNORM, R8G8_B8G8_UNORM, G8R8_G8B8_UNORM.
+
+<a id="tiled-mipmap-packing"></a>
+
+### Standard mips and packed mip tails
+
+Depending on the [tier](#tiled-tiers) of Tiled Resources support, mipmaps with certain dimensions do not follow the standard tile shapes and
+are considered to all be packed together with one another in a manner that is opaque to the application. Higher Tiers of support have broader guarantees about what
+types of surface dimensions fit in the standard tile shapes (and can therefore be individually mapped by applications).
+
+What can vary between implementations is that -
+given a Tiled Resource's dimensions, format, number of mipmaps and array slices - some number M of mips (per array slice) may be packed into some number N tiles. The
+[GetResourceTiling](#get-resource-tiling) API exists to allow the driver to report to the application what M and N are (among other details about the surface
+that this API reports that are standard and do not vary by IHV). The set of tiles for the packed mips are still 64KB and can be individually mapped into disparate locations
+in a heap, however the pixel shape of the tiles and how the mipmaps fit across the set of tiles is IHV specific and too complex to expose. So applications are required
+to either map all of the tiles that are designated as packed, or none of them, at a time. Otherwise the behavior for accessing the Tiled Resource is undefined.
+
+For arrayed surfaces, the set of packed mips and the number of packed tiles storing those mips (M and N described above) applies individually for each array slice.
+
+Dedicated APIs for [CopyTiles](resource-operations.md#copytiles) cannot access packed mips. Applications that wish to copy data to/from packed mips can do so using all the
+non-Tiled Resource specific APIs for copying and rendering to surfaces.
+
+For the purposes of populating the contents of mipmapped Tiled Resources for mips that are non packed (use the standard tile shapes) from CPU memory
+(using upload buffers), there is a well defined CPU-side layout for the tiling of all mipmaps independent of implementation (described in the [CopyTiles](resource-operations.md#copytiles) section).
+Implementations can hide any differences in tile breakdown of mipmaps on the GPU side during Copy operations.
+
+<a id="tile-types"></a>
+
+### Tile coordinates and regions
+
+<a id="d3d12-tiled-resource-coordinate"></a>
+
+#### D3D12_TILED_RESOURCE_COORDINATE
+
+##### Syntax
+
+```cpp
+typedef struct D3D12_TILED_RESOURCE_COORDINATE {
+  UINT X;
+  UINT Y;
+  UINT Z;
+  UINT Subresource;
+} D3D12_TILED_RESOURCE_COORDINATE;
+```
+
+##### Members
+
+`X`
+
+The x-coordinate of the tiled resource.
+
+`Y`
+
+The y-coordinate of the tiled resource.
+
+`Z`
+
+The z-coordinate of the tiled resource.
+
+`Subresource`
+
+The index of the subresource for the tiled resource.
+
+For mipmaps that use nonstandard tiling, or are packed, or both use nonstandard tiling and are packed, any subresource value that indicates any of the packed mipmaps all refer to the same tile. Additionally, the X coordinate is used to indicate a tile within the packed mip region, rather than a logical region of a single subresource. The Y and Z coordinates must be zero.
+
+##### Remarks
+
+This structure is used by the [CopyTiles](resource-operations.md#copytiles), [CopyTileMappings](resources.md#copy-tile-mappings) and [UpdateTileMappings](resources.md#update-tile-mappings) methods.
+
+<a id="d3d12-tile-region-size"></a>
+
+#### D3D12_TILE_REGION_SIZE
+
+##### Syntax
+
+```cpp
+typedef struct D3D12_TILE_REGION_SIZE {
+  UINT   NumTiles;
+  BOOL   UseBox;
+  UINT   Width;
+  UINT16 Height;
+  UINT16 Depth;
+} D3D12_TILE_REGION_SIZE;
+```
+
+##### Members
+
+`NumTiles`
+
+The number of tiles in the tiled region.
+
+`UseBox`
+
+Specifies whether the runtime uses the **Width**, **Height**, and **Depth** members to define the region.
+
+If **TRUE**, the runtime uses the **Width**, **Height**, and **Depth** members to define the region. In this case, **NumTiles** should be equal to **Width** \* **Height** \* **Depth**.
+
+If **FALSE**, the runtime ignores the **Width**, **Height**, and **Depth** members and uses the **NumTiles** member to traverse tiles in the resource linearly across x, then y, then z (as applicable) and then spills over mipmaps/arrays in subresource order. For example, use this technique to map an entire resource at once.
+
+Regardless of whether you specify **TRUE** or **FALSE** for **UseBox**, you use a [D3D12_TILED_RESOURCE_COORDINATE](#d3d12-tiled-resource-coordinate) structure to specify the starting location for the region within the resource as a separate parameter outside of this structure by using x, y, and z coordinates.
+
+When the region includes mipmaps that are packed with nonstandard tiling, **UseBox** must be **FALSE** because tile dimensions are not standard and the app only knows a count of how many tiles are consumed by the packed area, which is per array slice. The corresponding (separate) starting location parameter uses x to offset into the flat range of tiles in this case, and y and z coordinates must each be 0.
+
+`Width`
+
+The width of the tiled region, in tiles. Used for buffer and 1D, 2D, and 3D textures.
+
+`Height`
+
+The height of the tiled region, in tiles. Used for 2D and 3D textures.
+
+`Depth`
+
+The depth of the tiled region, in tiles. Used for 3D textures or arrays. For arrays, used for advancing in depth jumps to next slice of same mipmap size, which isn't contiguous in the subresource counting space if there are multiple mipmaps.
+
+##### Remarks
+
+This structure is used by the [CopyTiles](resource-operations.md#copytiles), [CopyTileMappings](resources.md#copy-tile-mappings) and [UpdateTileMappings](resources.md#update-tile-mappings) methods.
+
+Coordinates index tiles, not pixels or bytes. Box regions traverse X fastest, then Y, then Z; a box cannot span mip levels. For arrays, `Depth` selects consecutive array slices at the same mip level, so the subresource-index stride is the resource's mip count, not one. A linear region can spill across mips and array slices in subresource order. A region containing packed mips must use `UseBox = FALSE`; its X is a flat packed-tile offset and Y and Z must be zero.
+
+A packed-subresource coordinate refers to the packed tail of its own array slice, not one tail shared by all array slices.
+
+`NumTiles` must equal `Width * Height * Depth` for a box. The region must fit the selected resource, and dimension/count arithmetic must not overflow. `NumTiles = 0` does not designate the whole resource. The whole-resource default belongs only to the optional-array rules of `UpdateTileMappings`; its checked-layer zero-count diagnostics are described with that method.
+
+<a id="tiling-metadata"></a>
+
+### Tiling metadata
+
+<a id="d3d12-tile-shape"></a>
+
+#### D3D12_TILE_SHAPE
+
+##### Declaration
+
+```cpp
+typedef struct D3D12_TILE_SHAPE {
+  UINT WidthInTexels;
+  UINT HeightInTexels;
+  UINT DepthInTexels;
+} D3D12_TILE_SHAPE;
+```
+
+##### Members
+
+`WidthInTexels`
+
+The width in texels of the tile.
+
+`HeightInTexels`
+
+The height in texels of the tile.
+
+`DepthInTexels`
+
+The depth in texels of the tile.
+
+##### Remarks
+
+This structure is used by the [GetResourceTiling](resources.md#get-resource-tiling) method.
+
+<a id="d3d12-packed-mip-info"></a>
+
+#### D3D12_PACKED_MIP_INFO
+
+##### Declaration
+
+```cpp
+typedef struct D3D12_PACKED_MIP_INFO {
+  UINT8 NumStandardMips;
+  UINT8 NumPackedMips;
+  UINT  NumTilesForPackedMips;
+  UINT  StartTileIndexInOverallResource;
+} D3D12_PACKED_MIP_INFO;
+```
+
+##### Members
+
+`NumStandardMips`
+
+The number of standard mipmaps in the tiled resource.
+
+`NumPackedMips`
+
+The number of packed mipmaps in the tiled resource.
+
+This number starts from the least detailed mipmap (either sharing tiles or using non standard tile layout). This number is 0 if no such packing is in the resource. For array surfaces, this value is the number of mipmaps that are packed for a given array slice where each array slice repeats the same packing.
+
+On Tier\_2 tiled resources hardware, mipmaps that fill at least one standard shaped tile in all dimensions are not allowed to be included in the set of packed mipmaps. On Tier\_1 hardware, mipmaps that are an integer multiple of one standard shaped tile in all dimensions are not allowed to be included in the set of packed mipmaps. Mipmaps with at least one dimension less than the standard tile shape may or may not be packed. When a given mipmap needs to be packed, all coarser mipmaps for a given array slice are considered packed as well.
+
+`NumTilesForPackedMips`
+
+The number of tiles for the packed mipmaps in the tiled resource.
+
+If there is no packing, this value is meaningless and is set to 0. Otherwise, it is set to the number of tiles that are needed to represent the set of packed mipmaps. The pixel layout within the packed mipmaps is hardware specific. If apps define only partial mappings for the set of tiles in packed mipmaps, read and write behavior is vendor specific and undefined. For arrays, this value is only the count of packed mipmaps within the subresources for each array slice.
+
+`StartTileIndexInOverallResource`
+
+The offset of the first packed tile for the resource in the overall range of tiles. If **NumPackedMips** is 0, this value is meaningless and is 0. Otherwise, it is the offset of the first packed tile for the resource in the overall range of tiles for the resource. A value of 0 for **StartTileIndexInOverallResource** means the entire resource is packed. For array surfaces, this is the offset for the tiles that contain the packed mipmaps for the first array slice. Packed mipmaps for each array slice in arrayed surfaces are at this offset past the beginning of the tiles for each array slice.
+**Note** The number of overall tiles, packed or not, for a given array slice is simply the total number of tiles for the resource divided by the resource's array size, so it is easy to locate the range of tiles for any given array slice, out of which **StartTileIndexInOverallResource** identifies which of those are packed.
+##### Remarks
+
+This structure is used by the [GetResourceTiling](resources.md#get-resource-tiling) method.
+
+<a id="d3d12-subresource-tiling"></a>
+
+#### D3D12_SUBRESOURCE_TILING
+
+##### Declaration
+
+```cpp
+typedef struct D3D12_SUBRESOURCE_TILING {
+  UINT   WidthInTiles;
+  UINT16 HeightInTiles;
+  UINT16 DepthInTiles;
+  UINT   StartTileIndexInOverallResource;
+} D3D12_SUBRESOURCE_TILING;
+```
+
+##### Members
+
+`WidthInTiles`
+
+The width in tiles of the subresource.
+
+`HeightInTiles`
+
+The height in tiles of the subresource.
+
+`DepthInTiles`
+
+The depth in tiles of the subresource.
+
+`StartTileIndexInOverallResource`
+
+The index of the tile in the overall tiled subresource to start with.
+
+##### Remarks
+
+This structure is used by the [GetResourceTiling](resources.md#get-resource-tiling) method.
+
+<a id="d3d12-tile-range-flags"></a>
+
+#### D3D12_TILE_RANGE_FLAGS
+
+##### Declaration
+
+```cpp
+typedef enum D3D12_TILE_RANGE_FLAGS {
+  D3D12_TILE_RANGE_FLAG_NONE = 0,
+  D3D12_TILE_RANGE_FLAG_NULL = 1,
+  D3D12_TILE_RANGE_FLAG_SKIP = 2,
+  D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE = 4
+} D3D12_TILE_RANGE_FLAGS;
+```
+
+##### Constants
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `D3D12_TILE_RANGE_FLAG_NONE` | `0` | No tile-mapping flags are specified. |
+| `D3D12_TILE_RANGE_FLAG_NULL` | `1` | The tile range is **NULL**. |
+| `D3D12_TILE_RANGE_FLAG_SKIP` | `2` | Skip the tile range. |
+| `D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE` | `4` | Reuse a single tile in the tile range. |
+
+##### Remarks
+
+Use these flags with [ID3D12CommandQueue::UpdateTileMappings](resources.md#update-tile-mappings).
+
+<a id="d3d12-tile-mapping-flags"></a>
+
+#### D3D12_TILE_MAPPING_FLAGS
+
+##### Declaration
+
+```cpp
+typedef enum D3D12_TILE_MAPPING_FLAGS {
+  D3D12_TILE_MAPPING_FLAG_NONE = 0,
+  D3D12_TILE_MAPPING_FLAG_NO_HAZARD = 0x1
+} D3D12_TILE_MAPPING_FLAGS;
+```
+
+##### Constants
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `D3D12_TILE_MAPPING_FLAG_NONE` | `0` | No tile-mapping flags are specified. |
+| `D3D12_TILE_MAPPING_FLAG_NO_HAZARD` | `0x1` | Unsupported, do not use. |
+
+##### Remarks
+
+This enum is used by the following methods:
+
+- [CopyTileMappings](resources.md#copy-tile-mappings)
+- [UpdateTileMappings](resources.md#update-tile-mappings)
+
+`D3D12_TILE_MAPPING_FLAG_NONE` is the supported mapping-operation flag. `D3D12_TILE_MAPPING_FLAG_NO_HAZARD` remains declared as `0x1` but is unsupported and must not be used. It does not establish an application hazard promise or synchronization relaxation.
+
+Each range has one interpretation: `NONE` (consecutive heap tiles), `NULL` (unmapped), `SKIP` (leave mappings unchanged), or `REUSE_SINGLE_TILE` (repeat one heap tile). These are range alternatives, not independent composable behaviors. Undeclared flag bits are not valid application flags.
+
+<a id="tiled-tiers"></a>
+
+### Tiers and access behavior
+
+#### Declaration
+
+```cpp
+typedef enum D3D12_TILED_RESOURCES_TIER {
+  D3D12_TILED_RESOURCES_TIER_NOT_SUPPORTED = 0,
+  D3D12_TILED_RESOURCES_TIER_1 = 1,
+  D3D12_TILED_RESOURCES_TIER_2 = 2,
+  D3D12_TILED_RESOURCES_TIER_3 = 3,
+  D3D12_TILED_RESOURCES_TIER_4 = 4
+} D3D12_TILED_RESOURCES_TIER;
+```
+
+`D3D12_FEATURE_DATA_D3D12_OPTIONS::TiledResourcesTier` reports the supported cumulative tier. Tier 0 does not permit reserved resources, including buffers. Tier 1 supports reserved buffers and 2D textures but NULL-mapped GPU reads and writes are undefined, including possible device removal. Tier 2 adds defined NULL-read/write handling and shader LOD-clamp/mapping-status instructions. Feature level 12_0 requires Tier 2 or greater. Tier 3 adds volume tiled resources. Tier 4 adds the [arrayed full mip chain](#arrayed-packed-mips) for `64KB_UNDEFINED_SWIZZLE`.
+
+On Tier 1, only mips whose dimensions are integer multiples of the standard tile shape are guaranteed nonpacked. The first mip not satisfying that condition and all coarser mips may form an opaque packed tail. Such a resource cannot have more than one array slice. Tier 1 does not expose the tiled shader status/LOD-clamp instructions. Heap buffer-versus-texture restrictions are defined by [heap flags](#heap-flags); updating mappings does not change heap flags.
+
+On Tier 2 and higher, mips at least one standard tile in every dimension are guaranteed nonpacked. Smaller mips may be packed, and once one mip is packed all coarser mips in that array slice are packed. Tiers 2 and 3 do not permit arrayed packed tails; Tier 4 removes that restriction for the selected undefined-swizzle layout.
+
+Format support is reported by `D3D12_FORMAT_SUPPORT2_TILED`. Tiled MSAA quality levels use `D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS` with `D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_TILED_RESOURCE`; support and quality levels need not equal the non-tiled case. The ordinary [format-support owner](formats.md#support) retains the whole feature-query API.
+
+`D3D12_FEATURE_DATA_D3D12_OPTIONS5::SRVOnlyTiledResourceTier3` independently permits read-only volume tiled resources without full Tier 3 support. This does not permit render-target, depth-stencil or unordered-access flags on those volumes; those uses require full Tier 3.
+
+<a id="tiled-virtual-address"></a>
+
+#### GPU virtual address limits
+
+##### Declaration
+
+```cpp
+typedef struct D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {
+  UINT MaxGPUVirtualAddressBitsPerResource;
+  UINT MaxGPUVirtualAddressBitsPerProcess;
+} D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT;
+```
+
+##### Members
+
+`MaxGPUVirtualAddressBitsPerResource`
+
+The maximum GPU virtual address bits per resource.
+
+Some adapters have significantly less bits available per resource than per process, while other adapters have significantly greater bits available per resource than per process. The latter scenario tends to happen in less common scenarios, like when running a 32-bit process on certain UMA adapters. When per resource capabilities are greater than per process, the greater per resource capabilities can only be leveraged by reserved resources or NULL mapped pages.
+
+`MaxGPUVirtualAddressBitsPerProcess`
+
+The maximum GPU virtual address bits per process.
+
+When this value is nearly equal to the available residency budget, [Evict](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12device-evict) will not be a feasible option to manage residency. See [MakeResident](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12device-makeresident) for more details.
+
+##### Query
+
+See the enumeration constant D3D12\_FEATURE\_GPU\_VIRTUAL\_ADDRESS\_SUPPORT in the [D3D12_FEATURE](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_feature) enumeration.
+
+#### Stencil-containing formats
+
+Formats containing stencil are not supported with Tiled Resources.
+
+This includes DXGI_FORMAT_D24_UNORM_S8_UINT (and related formats in the R24G8 family) and DXGI_FORMAT_D32_FLOAT_S8X24_UINT (and related formats in the R32G8X24 family).
+
+Format availability is governed by [tiled format support](formats.md#support) and the [depth-stencil resource flags](#resource-flags).
+
+#### Pipeline access
+
+Tiled Resources can be used in Shader Resource Views, Render Target Views, Depth Stencil Views and Unordered Access Views, as well
+as some bindpoints where Views aren't used, such as Vertex Buffer bindings. See [resource creation and pipeline bindings](#resource-binding-declarations). Copy\* operations also work on Tiled Resources.
+
+If multiple tile coordinates in one or more views are bound to the same memory location, reads and writes from different paths to the same memory will occur in
+a nondeterministic/nonrepeatable order of memory accesses.
+
+If all tiles behind a memory access footprint from a shader are mapped to unique tiles, behavior is identical on all implementations to the surface having the same memory contents in a non-tiled fashion.
+
+#### Shader-resource views
+
+Behavior for SRV reads that involve non-mapped tiles depends on the level of hardware support - see read behavior in [tiled-resource tiers](#tiled-tiers)
+for a breakdown of requirements. The following summarizes Tier 2 and higher read behavior.
+
+Consider a texture filter operation that reads from a set of texels in an SRV. Texels that fall on non-mapped tiles contribute 0 in all non-missing components of the format, and the
+[default for missing components](../archive/D3D11_3_FunctionalSpec.htm#DefaultsForMissingComponents)(19.1.3.3), into the overall filter operation
+alongside contributions from mapped texels. The texels are all weighted and combined together independent of whether the data came from mapped or non-mapped tiles.
+
+**Compatibility:** Some first generation Tier 2 level hardware does not meet this spec requirement and returns the 0 with defaults described above as the overall filter result if ANY texels (with nonzero weight) fall on non-mapped tiles.
+Other hardware must include all nonzero-weight texels in the filter.
+
+#### Unordered-access views
+
+Behavior of UAV reads and writes depends on the level of hardware support. See overall read and write behavior for [tiled-resource tiers](#tiled-tiers)
+for a breakdown of requirements.
+
+For accesses to unmapped tiles on Tier 2 and higher (subject to the cache qualification below):
+
+Shader operations that read from a non-mapped tile in a UAV return 0 in all non-missing components of the format, and the
+[default for missing components](../archive/D3D11_3_FunctionalSpec.htm#DefaultsForMissingComponents)(19.1.3.3).
+
+Shader operations that attempt to write to a non-mapped tile cause nothing to be written to the non-mapped area (while writes to mapped area
+proceed). This ideal definition for write handling is not required by Tier 2 - writes to non-mapped tiles may end up in a cache that subsequent reads could pick up.
+
+#### Depth-stencil views
+
+Behavior of DSV reads and writes depends on the level of hardware support. See overall read and write behavior for [tiled-resource tiers](#tiled-tiers)
+for a breakdown of requirements.
+
+For accesses to unmapped tiles on Tier 2 and higher (subject to the cache qualification below):
+
+If a tile is not mapped in the DepthStencilView, the return value from reading depth is 0, which is then fed into whatever operation(s) are configured for the depth read value. Writes to the missing depth tile are dropped.
+This ideal definition for write handling is not required by Tier 2 - writes to non-mapped tiles may end up in a cache that subsequent reads could pick up.
+
+#### Render-target views
+
+Behavior of RTV reads and writes depends on the level of hardware support. See overall read and write behavior for [tiled-resource tiers](#tiled-tiers)
+for a breakdown of requirements.
+
+On all implementations it is valid for different RTVs (and DSV) bound simultaneously to have different areas mapped vs non-mapped and have different sized surface formats (which means different tile shapes).
+
+For accesses to unmapped tiles on Tier 2 and higher (subject to the cache qualification below):
+
+Reads from unmapped tiles in RenderTargetViews return 0 in all non-missing components of the format, and the [default for missing components](../archive/D3D11_3_FunctionalSpec.htm#DefaultsForMissingComponents)(19.1.3.3).
+Writes to unmapped tiles in RenderTargetViews are dropped. This ideal definition for write handling is not required - writes to non-mapped tiles may end up in a cache that subsequent reads could pick up.
+
+[Shader mapping-status feedback](common-shader-internals.md#mapping-feedback) defines the opaque access status, Fully Mapped Check (including zero-weight texels and missing components), and per-sample MinLOD clamp. [Min/max reduction filtering](common-shader-internals.md#minmax-filtering) owns the reduction rules. [Sampler feedback](common-shader-internals.md#sampler-feedback) records sampling usage and is not a tile-mapping operation.
+
+<a id="tiled-data-compatibility"></a>
+
+### Shared tiles and compatible data inheritance
+
+Heaps can be shared with other processes just like traditional resources. Reserved resources (which reference heaps) cannot be shared across devices/processes. However separate processes
+can create their own reserved resources that map to heap(s) shared between them.
+
+Shared Heaps cannot be resized.
+
+Different Tiled Resources can point to the same memory with different formats as long as applications don't rely on the results of writing to the memory with one format and reading with another,
+unless the formats are in the same format family (have the same typeless parent format) - e.g. R8G8B8A8_UNORM and R8G8B8A8_UINT are compatible with each other but not with R16G16_UNORM. There is one exception
+where bleeding data from one format aliasing to another is well defined: A tile that completely contains 0 for all its bits can be used with any format that interprets those memory contents as 0 (regardless of memory
+layout). So a tile could be cleared to 0x00 with the format R8_UNORM and then used with a format like R32G32_FLOAT and it would appear the contents are still (0.0f,0.0f).
+
+The format-family and all-zero cases above are supplemented by the specific BC/uncompressed and packed/nonpacked solid-color compatibility cases below. All data inheritance remains subject to the mapping-local metadata and aliasing requirements in this section.
+
+Suppose multiple Tiled Resources have mappings to the same heap locations and each resource is used to access the same data. This is only valid if problems with hardware
+optimization structures are avoided, the applicable D3D12 aliasing synchronization is performed and the Tiled Resources are compatible with each other. The latter is described here (in terms of what it means
+for Tiled Resources sharing tiles to be incompatible). The conditions for incompatibility when accessing the same data across duplicate tile mappings are the use of different surface dimensions,
+format, or differences in the presence of RenderTarget or DepthStencil resource flags on the
+Resources. Writing to the memory with one type of mapping produces undefined results if subsequently reading or rendering via a mapping from an
+incompatible Resource. If the other Resource sharing mappings will be first initialized with new data (recycling the memory for a different purpose), that is fine since
+data is not bleeding across incompatible interpretations, however the [D3D12 aliasing synchronization](synchronization.md#enhanced-aliasing) must be performed when switching between accessing incompatible mappings like this.
+
+If the RenderTarget or DepthStencil resource flag is not set on any of the resources sharing mappings with each other, there are far fewer restrictions:
+As long as the format and surface types (e.g Texture2D) are the same, tiles can be shared. Some cases of different format are compatible such as BC\* surfaces and the equivalent sized
+uncompressed 32 bit or 16 bit per component format, like BC6H and R32G32B32A32. Many 32 bit per element formats can be aliased with R32_\* as well (R10G10B10A2_\*, R8G8B8A8_\*, B8G8R8A8_\*,B8G8R8X8_\*,R16G16_\*) -
+this has always been allowed for non Tiled Resources.
+
+Sharing between packed and non-packed tiles is fine if the formats are compatible and the tiles are filled with solid color.
+
+Finally, if nothing is common about the Resources sharing tile mappings except that none have RenderTarget/DepthStencil resource flags, then only memory filled with 0 can
+be shared safely - it will appear as whatever 0 decodes to for the definition of the given Resource format (typically just 0).
+
+Suppose an Unordered Access View on a Tiled Resource has duplicate tile mappings in its area or with other resources bound to the pipeline. Ordering of accesses to these duplicated tiles is
+undefined if performed by different threads, just as any ordering of memory access to UAVs in general is unordered.
+
+If a Tiled Resource's tile mappings have changed or content in mapped heap tiles have changed via another Tiled Resource's mappings,
+and the Tiled Resource is going to be rendered via RenderTargetView or DepthStencilView, the application must initialize the affected mapping-local metadata before rendering, using the applicable [enhanced aliasing and initialization contract](synchronization.md#enhanced-aliasing) or [legacy aliasing path](synchronization.md#legacy-aliasing). The enhanced contract permits the specified full-subresource discard path, as well as the applicable clear/copy initialization paths, subject to that owner's synchronization and discard conditions. Failure to perform the required initialization results in hardware optimization structures for the given
+RenderTargetView or DepthStencilView being stale and will result in garbage rendering results on some hardware and inconsistency across different hardware. These hidden optimization data structures
+used by hardware may be local to individual mappings, not visible to other mappings to the same memory.
+
+If an application chooses clear-based initialization and needs to preserve existing memory contents of areas in a Tiled Resource where mappings have changed, it has to preserve those contents across the clear. This can be accomplished by
+the application by first saving the contents where Tile mappings have changed (by copying them to a temporary surface, for example using CopyTiles()), issuing the Clear and then copying the contents back.
+While this would accomplish the task of preserving surface contents for incremental Rendering, the downside is that subsequent rendering performance on the surface may suffer because rendering optimizations may
+be lost.
+
+If a tile is mapped into multiple Tiled Resources at the same time and tile contents are manipulated by any means (render, copy etc.) via one of the Tiled Resources then if the same tile is to be rendered via any other
+Tiled Resource, the tile's mapping-local metadata must first be initialized under the applicable D3D12 aliasing and initialization contract.
+
+Suppose an area in a Tiled Resource is being rendered to and the heap tiles referenced by the render area are also mapped to from outside the render area (including via other Tiled Resources, at the same time or not).
+Data rendered to these tiles is not
+guaranteed to appear correctly when viewed through the other mappings, even though the underlying memory layout is compatible.
+This is due to optimization data structures some hardware uses that can be local to individual mappings for renderable surfaces, not visible to other mappings to the same memory location.
+This restriction can be worked around by copying from the rendered mapping to all the other mappings to the same memory that might be accessed
+(or clearing that memory or copying other data to it if the old contents are no longer needed).
+While this seems redundant, it makes all other mappings to the same memory correctly understand how to access its contents, and
+at least the memory savings of having only a single physical memory backing remains intact. Also, note that when switching between using different Tiled Resources that share mappings (unless only reading),
+the [D3D12 aliasing synchronization](synchronization.md#enhanced-aliasing) must be performed in between.
+
+If an area in a Tiled Resource is being rendered to and within the render area multiple tiles are mapped to the same heap location, rendering results are undefined on those tiles.
+
+The [enhanced aliasing and initialization contract](synchronization.md#enhanced-aliasing), together with the supported [legacy aliasing path](synchronization.md#legacy-aliasing), constrains data inheritance and metadata initialization. Updated mappings do not initialize texture metadata. Newly mapped render-target/depth-stencil tiles require the initialization specified by that owner before rendering; sharing physical pages does not make mapping-local optimization metadata visible through another resource.
+
+For reserved textures, the legacy-state compatibility requirement for data inheritance is `COMMON`. Per-tile inheritance through either `64KB_UNDEFINED_SWIZZLE` or `64KB_STANDARD_SWIZZLE` also requires `COMMON`. The standard-swizzle inheritance case does not extend the permitted layouts of reserved-texture creation; tiled layout and reserved creation are distinct properties. Render-target/depth-stencil textures cannot use ordinary per-tile aliasing to inherit their optimization metadata. These restrictions are additional to format/dimension compatibility, not overridden by it.
+
+[Copy overlap and duplicate-destination rules](resource-operations.md#copy-self-and-alias) apply to content copies. The temporary-source guarantee for overlapping `CopyTileMappings` copies mappings, not bytes, and grants no overlapping-content-copy permission.
+
+<a id="reserved-resource-apis"></a>
+
+## Reserved-resource creation and tiling APIs
+
+<a id="create-reserved-resource"></a>
+
+### ID3D12Device::CreateReservedResource
+
+#### Declaration
+
+```cpp
+HRESULT CreateReservedResource(
+    const D3D12_RESOURCE_DESC *pDesc,
+    D3D12_RESOURCE_STATES InitialState,
+    const D3D12_CLEAR_VALUE *pOptimizedClearValue,
+    REFIID riid,
+    void **ppvResource
+    );
+```
+
+#### Behavior
+
+Creates a resource that is reserved, and not yet mapped to any pages in a heap.
+
+#### Parameters
+
+`pDesc`
+
+Type: **const [D3D12_RESOURCE_DESC](resources.md#resource-description)\***
+
+A pointer to a **D3D12\_RESOURCE\_DESC** structure that describes the resource.
+
+`InitialState`
+
+Type: **[D3D12_RESOURCE_STATES](synchronization.md#legacy-states)**
+
+The initial state of the resource, as a bitwise-OR'd combination of **D3D12\_RESOURCE\_STATES** enumeration constants.
+
+`pOptimizedClearValue`
+
+Type: **const [D3D12_CLEAR_VALUE](resources.md#optimized-clear-value)\***
+
+Specifies a **D3D12\_CLEAR\_VALUE** structure that describes the default value for a clear color.
+
+*pOptimizedClearValue* specifies a value for which clear operations are most optimal. When the created resource is a texture with either the [D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET](resources.md#resource-flags) or **D3D12\_RESOURCE\_FLAG\_ALLOW\_DEPTH\_STENCIL** flags, you should choose the value with which the clear operation will most commonly be called. You can call the clear operation with other values, but those operations won't be as efficient as when the value matches the one passed in to resource creation.
+
+When you use [D3D12_RESOURCE_DIMENSION_BUFFER](resources.md#resource-dimensions), you must set *pOptimizedClearValue* to `nullptr`.
+
+`riid`
+
+Type: **REFIID**
+
+A reference to the globally unique identifier (**GUID**) of the resource interface to return in *ppvResource*. See the operation requirements.
+
+While *riid* is most commonly the **GUID** of [ID3D12Resource](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12resource), it may be the **GUID** of any interface. If the resource object doesn't support the interface for this **GUID**, then creation fails with **E\_NOINTERFACE**.
+
+`ppvResource`
+
+Type: **void\*\***
+
+An optional pointer to a memory block that receives the requested interface pointer to the created resource object.
+
+*ppvResource* can be `nullptr`, to enable capability testing. When *ppvResource* is `nullptr`, no object is created, and **S\_FALSE** is returned when *pDesc* is valid.
+
+#### Return values
+
+Type: **[HRESULT](https://learn.microsoft.com/en-us/windows/win32/com/structure-of-com-error-codes)**
+
+If the function succeeds, it returns **S\_OK**. Otherwise, it returns an [**HRESULT**](https://learn.microsoft.com/en-us/windows/win32/com/structure-of-com-error-codes)[error code](https://learn.microsoft.com/en-us/windows/win32/com/com-error-codes-10).
+
+| Return value | Description |
+| --- | --- |
+| E\_OUTOFMEMORY | There is insufficient memory to create the resource. |
+
+See [Direct3D 12 return codes](https://learn.microsoft.com/en-us/windows/win32/direct3d12/d3d12-graphics-reference-returnvalues) for other possible return values.
+
+#### Operation requirements
+
+The resource is created with virtual memory only, no backing store.
+
+You need to map the resource to physical memory (that is, to a heap) using [CopyTileMappings](resources.md#copy-tile-mappings) and [UpdateTileMappings](resources.md#update-tile-mappings).
+
+These resource types can only be created when the adapter supports tiled resource tier 1 or greater. The tiled resource tier defines the behavior of accessing a resource that is not mapped to a heap.
+
+The [shared creation validation](#creation-contracts), [optimized-clear-value rules](#optimized-clear-value), [initial state/layout rules](#initial-layout-and-format-lists) and [protected creation requirements](#protected-creation) also apply to the versioned reserved-resource methods. The resource must satisfy its dimension, format, layout, sample and tier restrictions. Creation does not initialize texture contents or establish physical backing.
+
+<a id="create-reserved-resource1"></a>
+
+### ID3D12Device4::CreateReservedResource1
+
+#### Declaration
+
+```cpp
+HRESULT CreateReservedResource1(
+    const D3D12_RESOURCE_DESC *pDesc,
+    D3D12_RESOURCE_STATES InitialState,
+    const D3D12_CLEAR_VALUE *pOptimizedClearValue,
+    ID3D12ProtectedResourceSession *pProtectedSession,
+    REFIID riid,
+    void **ppvResource
+    );
+```
+
+#### Behavior
+
+Creates a resource (optionally for a protected session) that is reserved, and not yet mapped to any pages in a heap. Also see [ID3D12Device::CreateReservedResource](resources.md#create-reserved-resource).
+
+Only tiles from heaps created with the same protected resource session can be mapped into a protected reserved resource.
+
+#### Parameters
+
+`pDesc`
+
+Type: **const [D3D12_RESOURCE_DESC](resources.md#resource-description)\***
+
+A pointer to a **D3D12\_RESOURCE\_DESC** structure that describes the resource.
+
+`InitialState`
+
+Type: **[D3D12_RESOURCE_STATES](synchronization.md#legacy-states)**
+
+The initial state of the resource, as a bitwise-OR'd combination of **D3D12\_RESOURCE\_STATES** enumeration constants.
+
+`pOptimizedClearValue`
+
+Type: **const [D3D12_CLEAR_VALUE](resources.md#optimized-clear-value)\***
+
+Specifies a **D3D12\_CLEAR\_VALUE** structure that describes the default value for a clear color.
+
+*pOptimizedClearValue* specifies a value for which clear operations are most optimal. When the created resource is a texture with either the [D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET](resources.md#resource-flags) or **D3D12\_RESOURCE\_FLAG\_ALLOW\_DEPTH\_STENCIL** flags, you should choose the value with which the clear operation will most commonly be called. You can call the clear operation with other values, but those operations won't be as efficient as when the value matches the one passed in to resource creation.
+
+When you use [D3D12_RESOURCE_DIMENSION_BUFFER](resources.md#resource-dimensions), you must set *pOptimizedClearValue* to `nullptr`.
+
+`pProtectedSession`
+
+Type: **[ID3D12ProtectedResourceSession](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12protectedresourcesession)\***
+
+An optional pointer to an object that represents a session for content protection. If provided, this session indicates that the resource should be protected. You can obtain an **ID3D12ProtectedResourceSession** by calling [ID3D12Device4::CreateProtectedResourceSession](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device4-createprotectedresourcesession).
+
+`riid`
+
+Type: **REFIID**
+
+A reference to the globally unique identifier (**GUID**) of the resource interface to return in *ppvResource*. See the operation requirements.
+
+While *riid* is most commonly the **GUID** of [ID3D12Resource](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12resource), it may be the **GUID** of any interface. If the resource object doesn't support the interface for this **GUID**, then creation fails with **E\_NOINTERFACE**.
+
+`ppvResource`
+
+Type: **void\*\***
+
+An optional pointer to a memory block that receives the requested interface pointer to the created resource object.
+
+*ppvResource* can be `nullptr`, to enable capability testing. When *ppvResource* is `nullptr`, no object is created, and **S\_FALSE** is returned when *pDesc* is valid.
+
+#### Return values
+
+Type: **[HRESULT](https://learn.microsoft.com/en-us/windows/win32/com/structure-of-com-error-codes)**
+
+If the function succeeds, it returns **S\_OK**. Otherwise, it returns an [**HRESULT**](https://learn.microsoft.com/en-us/windows/desktop/com/structure-of-com-error-codes)[error code](https://learn.microsoft.com/en-us/windows/win32/com/com-error-codes-10).
+
+| Return value | Description |
+| --- | --- |
+| E\_OUTOFMEMORY | There is insufficient memory to create the resource. |
+
+See [Direct3D 12 return codes](https://learn.microsoft.com/en-us/windows/win32/direct3d12/d3d12-graphics-reference-returnvalues) for other possible return values.
+
+#### Operation requirements
+
+The resource is created with virtual memory only, no backing store.
+
+You need to map the resource to physical memory (that is, to a heap) using [CopyTileMappings](resources.md#copy-tile-mappings) and [UpdateTileMappings](resources.md#update-tile-mappings).
+
+These resource types can only be created when the adapter supports tiled resource tier 1 or greater. The tiled resource tier defines the behavior of accessing a resource that is not mapped to a heap.
+
+<a id="create-reserved-resource2"></a>
+
+### ID3D12Device10::CreateReservedResource2
+
+#### Declaration
+
+```cpp
+HRESULT CreateReservedResource2(
+    const D3D12_RESOURCE_DESC *pDesc,
+    D3D12_BARRIER_LAYOUT InitialLayout,
+    const D3D12_CLEAR_VALUE *pOptimizedClearValue,
+    ID3D12ProtectedResourceSession *pProtectedSession,
+    UINT32 NumCastableFormats,
+    const DXGI_FORMAT *pCastableFormats,
+    REFIID riid,
+    void **ppvResource
+    );
+```
+
+#### Behavior
+
+Creates a resource that is reserved, and not yet mapped to any pages in a heap.
+
+#### Parameters
+
+`pDesc`
+
+Type: **const [D3D12_RESOURCE_DESC](resources.md#resource-description)\***
+
+A pointer to a **D3D12\_RESOURCE\_DESC** structure that describes the resource.
+
+`InitialLayout`
+
+The initial layout of the texture resource; **D3D12\_BARRIER\_LAYOUT::D3D12\_BARRIER\_LAYOUT\_UNDEFINED** for buffers.
+
+`pOptimizedClearValue`
+
+Type: **const [D3D12_CLEAR_VALUE](resources.md#optimized-clear-value)\***
+
+Specifies a **D3D12\_CLEAR\_VALUE** structure that describes the default value for a clear color.
+
+*pOptimizedClearValue* specifies a value for which clear operations are most optimal. When the created resource is a texture with either the [D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET](resources.md#resource-flags) or **D3D12\_RESOURCE\_FLAG\_ALLOW\_DEPTH\_STENCIL** flags, you should choose the value with which the clear operation will most commonly be called. You can call the clear operation with other values, but those operations won't be as efficient as when the value matches the one passed in to resource creation.
+
+When you use [D3D12_RESOURCE_DIMENSION_BUFFER](resources.md#resource-dimensions), you must set *pOptimizedClearValue* to `nullptr`.
+
+`pProtectedSession`
+
+Type: **[ID3D12ProtectedResourceSession](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12protectedresourcesession)\***
+
+An optional pointer to an object that represents a session for content protection. If provided, this session indicates that the resource should be protected. You can obtain an **ID3D12ProtectedResourceSession** by calling [ID3D12Device4::CreateProtectedResourceSession](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device4-createprotectedresourcesession).
+
+`NumCastableFormats`
+
+The number of elements in *pCastableFormats*.
+
+`pCastableFormats`
+
+A contiguous array of [DXGI_FORMAT](https://learn.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format) structures that this resource can be cast to.
+
+`riid`
+
+Type: **REFIID**
+
+A reference to the globally unique identifier (**GUID**) of the resource interface to return in *ppvResource*. See the operation requirements.
+
+While *riid* is most commonly the **GUID** of [ID3D12Resource](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12resource), it may be the **GUID** of any interface. If the resource object doesn't support the interface for this **GUID**, then creation fails with **E\_NOINTERFACE**.
+
+`ppvResource`
+
+Type: **void\*\***
+
+An optional pointer to a memory block that receives the requested interface pointer to the created resource object.
+
+*ppvResource* can be `nullptr`, to enable capability testing. When *ppvResource* is `nullptr`, no object is created, and **S\_FALSE** is returned when *pDesc* is valid.
+
+#### Return values
+
+Type: **[HRESULT](https://learn.microsoft.com/en-us/windows/win32/com/structure-of-com-error-codes)**
+
+If the function succeeds, it returns **S\_OK**. Otherwise, it returns an [**HRESULT**](https://learn.microsoft.com/en-us/windows/win32/com/structure-of-com-error-codes)[error code](https://learn.microsoft.com/en-us/windows/win32/com/com-error-codes-10).
+
+| Return value | Description |
+| --- | --- |
+| E\_OUTOFMEMORY | There is insufficient memory to create the resource. |
+
+See [Direct3D 12 return codes](https://learn.microsoft.com/en-us/windows/win32/direct3d12/d3d12-graphics-reference-returnvalues) for other possible return values.
+
+#### Operation requirements
+
+The [CreateReservedResource](resources.md#create-reserved-resource) backing and tier requirements also apply.
+
+`ID3D12Device10` declares this entry. It uses the [enhanced-barrier creation layout](#initial-layout-and-format-lists); buffers use `D3D12_BARRIER_LAYOUT_UNDEFINED`. Enhanced barriers must be supported. The [castable-format creation contract](formats.md#casting) defines `NumCastableFormats`, `pCastableFormats`, relaxed casting support and validation. A protected reserved resource can map only heap tiles created with the same protected resource session, as for `CreateReservedResource1`.
+
+<a id="get-resource-tiling"></a>
+
+### ID3D12Device::GetResourceTiling
+
+#### Declaration
+
+```cpp
+void GetResourceTiling(
+    ID3D12Resource *pTiledResource,
+    UINT *pNumTilesForEntireResource,
+    D3D12_PACKED_MIP_INFO *pPackedMipDesc,
+    D3D12_TILE_SHAPE *pStandardTileShapeForNonPackedMips,
+    UINT *pNumSubresourceTilings,
+    UINT FirstSubresourceTilingToGet,
+    D3D12_SUBRESOURCE_TILING *pSubresourceTilingsForNonPackedMips
+    );
+```
+
+#### Behavior
+
+Gets info about how a tiled resource is broken into tiles.
+
+#### Parameters
+
+`pTiledResource`
+
+Type: **[ID3D12Resource](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nn-d3d12-id3d12resource)\***
+
+Specifies a tiled [ID3D12Resource](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nn-d3d12-id3d12resource) to get info about.
+
+`pNumTilesForEntireResource`
+
+Type: **UINT\***
+
+A pointer to a variable that receives the number of tiles needed to store the entire tiled resource.
+
+`pPackedMipDesc`
+
+Type: **[D3D12_PACKED_MIP_INFO](resources.md#d3d12-packed-mip-info)\***
+
+A pointer to a [D3D12_PACKED_MIP_INFO](resources.md#d3d12-packed-mip-info) structure that **GetResourceTiling** fills with info about how the tiled resource's mipmaps are packed.
+
+`pStandardTileShapeForNonPackedMips`
+
+Type: **[D3D12_TILE_SHAPE](resources.md#d3d12-tile-shape)\***
+
+Specifies a [D3D12_TILE_SHAPE](resources.md#d3d12-tile-shape) structure that **GetResourceTiling** fills with info about the tile shape. This is info about how pixels fit in the tiles, independent of tiled resource's dimensions, not including packed mipmaps. If the entire tiled resource is packed, this parameter is meaningless because the tiled resource has no defined layout for packed mipmaps. In this situation, **GetResourceTiling** sets the members of D3D12\_TILE\_SHAPE to zeros.
+
+`pNumSubresourceTilings`
+
+Type: **UINT\***
+
+A pointer to a subresource-count variable. On input, this is the number of subresources to query tilings for; on output, this is the number that was actually retrieved at *pSubresourceTilingsForNonPackedMips* (clamped to what's available).
+
+`FirstSubresourceTilingToGet`
+
+Type: **UINT**
+
+The index of the first subresource whose tiling is requested. **GetResourceTiling** ignores this parameter if the number that *pNumSubresourceTilings* points to is 0.
+
+`pSubresourceTilingsForNonPackedMips`
+
+Type: **[D3D12_SUBRESOURCE_TILING](resources.md#d3d12-subresource-tiling)\***
+
+Specifies a [D3D12_SUBRESOURCE_TILING](resources.md#d3d12-subresource-tiling) structure that **GetResourceTiling** fills with info about subresource tiles. If subresource tiles are part of packed mipmaps, **GetResourceTiling** sets the members of D3D12\_SUBRESOURCE\_TILING to zeros, except the *StartTileIndexInOverallResource* member, which **GetResourceTiling** sets to D3D12\_PACKED\_TILE (0xffffffff). The D3D12\_PACKED\_TILE constant indicates that the whole **D3D12\_SUBRESOURCE\_TILING** structure is meaningless for this situation, and the info that the *pPackedMipDesc* parameter points to applies.
+
+#### Return values
+
+None
+
+#### Operation requirements
+
+To estimate the total resource size of textures needed when calculating heap sizes and calling [CreatePlacedResource](resources.md#create-placed-resource), use [GetResourceAllocationInfo](resources.md#allocation-info) instead of **GetResourceTiling**. **GetResourceTiling** cannot be used for this.
+
+For more information on tiled resources, refer to [Volume Tiled Resources](https://learn.microsoft.com/en-us/windows/desktop/direct3d12/volume-tiled-resources).
+
+The independent summary outputs may be omitted. If `pNumSubresourceTilings` is null, no subresource-tiling array is requested. Otherwise the input count is the capacity of `pSubresourceTilingsForNonPackedMips`; the returned count is clamped to the subresources available starting at `FirstSubresourceTilingToGet`. With an input count of zero, the first-subresource parameter is ignored and no array entries are written. A nonzero request requires a valid first subresource and sufficient output storage.
+
+Tile shape dimensions are independent of resource dimensions: even if a nonpacked subresource is smaller than a tile, the full tile shape is reported. For MSAA surfaces, those dimensions count pixels, not individual samples. For untyped buffers, one texel in the shape description is one byte.
+
+The per-array-slice tile stride is the total resource tile count divided by the array size. `NumStandardMips` and `NumPackedMips` describe one slice; `NumTilesForPackedMips` is also per slice. The first slice's `StartTileIndexInOverallResource` locates the packed tail; add the slice tile stride for later slices. Packed subresource entries use zero dimensions and `D3D12_PACKED_TILE` (`0xffffffff`), not an ordinary start index.
+
+This method reports tile organization, not the current physical page mappings. Applications track those mappings themselves; no mapping-readback operation is defined by this query.
+
+<a id="update-tile-mappings"></a>
+
+### ID3D12CommandQueue::UpdateTileMappings
+
+#### Declaration
+
+```cpp
+void UpdateTileMappings(
+    ID3D12Resource *pResource,
+    UINT NumResourceRegions,
+    const D3D12_TILED_RESOURCE_COORDINATE *pResourceRegionStartCoordinates,
+    const D3D12_TILE_REGION_SIZE *pResourceRegionSizes,
+    ID3D12Heap *pHeap,
+    UINT NumRanges,
+    const D3D12_TILE_RANGE_FLAGS *pRangeFlags,
+    const UINT *pHeapRangeStartOffsets,
+    const UINT *pRangeTileCounts,
+    D3D12_TILE_MAPPING_FLAGS Flags
+    );
+```
+
+#### Behavior
+
+Updates mappings of tile locations in reserved resources to memory locations in a resource heap.
+
+#### Parameters
+
+`pResource`
+
+A pointer to the reserved resource.
+
+`NumResourceRegions`
+
+The number of reserved resource regions.
+
+`pResourceRegionStartCoordinates`
+
+An array of [D3D12_TILED_RESOURCE_COORDINATE](resources.md#d3d12-tiled-resource-coordinate) structures that describe the starting coordinates of the reserved resource regions. The *NumResourceRegions* parameter specifies the number of **D3D12\_TILED\_RESOURCE\_COORDINATE** structures in the array.
+
+`pResourceRegionSizes`
+
+An array of [D3D12_TILE_REGION_SIZE](resources.md#d3d12-tile-region-size) structures that describe the sizes of the reserved resource regions. The *NumResourceRegions* parameter specifies the number of **D3D12\_TILE\_REGION\_SIZE** structures in the array.
+
+`pHeap`
+
+A pointer to the resource heap.
+
+`NumRanges`
+
+The number of tile ranges.
+
+`pRangeFlags`
+
+A pointer to an array of [D3D12_TILE_RANGE_FLAGS](resources.md#d3d12-tile-range-flags) values that describes each tile range. The *NumRanges* parameter specifies the number of values in the array.
+
+`pHeapRangeStartOffsets`
+
+An array of offsets into the resource heap. These are 0-based tile offsets, counting in tiles (not bytes).
+
+`pRangeTileCounts`
+
+An array of values that specify the number of tiles in each tile range. The *NumRanges* parameter specifies the number of values in the array.
+
+`Flags`
+
+A combination of [D3D12_TILE_MAPPING_FLAGS](resources.md#d3d12-tile-mapping-flags) values that are combined by using a bitwise OR operation.
+
+#### Return values
+
+None
+
+#### Operation requirements
+
+Use **UpdateTileMappings** to map the virtual pages of a reserved resource to the physical pages of a heap. The mapping does not have to be in order. A reserved resource can have tiles from multiple heaps.
+
+In a single call to **UpdateTileMappings**, you can map one or more ranges of resource tiles to one or more ranges of heap tiles.
+
+You can organize the parameters of **UpdateTileMappings** in these ways to perform an update:
+
+- **Reserved resource whose mappings are updated.** Mappings start off all NULL when a resource is initially created.
+- **Set of tile regions on the reserved resource whose mappings are updated.** You can make one **UpdateTileMappings** call to update many mappings or multiple calls with a bit more API call overhead as well if that is more convenient.
+    - *NumResourceRegions* specifies how many regions there are.
+    - *pResourceRegionStartCoordinates* and *pResourceRegionSizes* are each arrays that identify the start location and extent of each region. If *NumResourceRegions* is 1, for convenience either or both of the arrays that describe the regions can be NULL. NULL for *pResourceRegionStartCoordinates* means the start coordinate is all 0s, and NULL for both arrays identifies a default region that is the full set of tiles for the entire reserved resource, including all mipmaps, array slices, or both.
+    - If *pResourceRegionStartCoordinates* isn't NULL and *pResourceRegionSizes* is NULL, the region size defaults to 1 tile for all regions. This makes it easy to define mappings for a set of individual tiles each at disparate locations by providing an array of locations in *pResourceRegionStartCoordinates* without having to send an array of *pResourceRegionSizes* all set to 1.
+
+The updates are applied from first region to last; so, if regions overlap in a single call, the updates later in the list overwrite the areas that overlap with previous updates.
+- **Heap that provides memory where tile mappings can go.** If **UpdateTileMappings** only defines NULL mappings, you don't need to specify a heap.
+- **Set of tile ranges where mappings are going.** Each given tile range can specify one of a few types of ranges: a range of tiles in a heap (default), a count of tiles in the reserved resource to map to a single tile in a heap (sharing the tile), a count of tile mappings in the reserved resource to skip and leave as they are, or a count of tiles in the heap to map to NULL. *NumRanges* specifies the number of tile ranges, where the total tiles identified across all ranges must match the total number of tiles in the tile regions from the previously described reserved resource. Mappings are defined by iterating through the tiles in the tile regions in sequential order - x then y then z order for box regions - while walking through the set of tile ranges in sequential order. The breakdown of tile regions doesn't have to line up with the breakdown of tile ranges, but the total number of tiles on both sides must be equal so that each reserved resource tile specified has a mapping specified.
+    *pRangeFlags*, *pHeapRangeStartOffsets*, and *pRangeTileCounts* are all arrays, of size *NumRanges*, that describe the tile ranges. If *pRangeFlags* is NULL, all ranges are sequential tiles in the heap; otherwise, for each range i, *pRangeFlags[i]* identifies how the mappings in that range of tiles work:
+
+    - If *pRangeFlags[i]* is **D3D12\_TILE\_RANGE\_FLAG\_NONE**, that range defines sequential tiles in the heap, with the number of tiles being *pRangeTileCounts[i]* and the starting location *pHeapRangeStartOffsets[i]*. If *NumRanges* is 1, *pRangeTileCounts* can be NULL and defaults to the total number of tiles specified by all the tile regions.
+    - If *pRangeFlags[i]* is **D3D12\_TILE\_RANGE\_FLAG\_REUSE\_SINGLE\_TILE**, *pHeapRangeStartOffsets[i]* identifies the single tile in the heap to map to, and *pRangeTileCounts[i]* specifies how many tiles from the tile regions to map to that heap location. If *NumRanges* is 1, *pRangeTileCounts* can be NULL and defaults to the total number of tiles specified by all the tile regions.
+    - If *pRangeFlags[i]* is **D3D12\_TILE\_RANGE\_FLAG\_NULL**, *pRangeTileCounts[i]* specifies how many tiles from the tile regions to map to NULL. If *NumRanges* is 1, *pRangeTileCounts* can be NULL and defaults to the total number of tiles specified by all the tile regions. *pHeapRangeStartOffsets[i]* is ignored for NULL mappings.
+    - If *pRangeFlags[i]* is **D3D12\_TILE\_RANGE\_FLAG\_SKIP**, *pRangeTileCounts[i]* specifies how many tiles from the tile regions to skip over and leave existing mappings unchanged for. This can be useful if a tile region conveniently bounds an area of tile mappings to update except with some exceptions that need to be left the same as whatever they were mapped to before. *pHeapRangeStartOffsets[i]* is ignored for SKIP mappings.
+
+Reserved resources must follow the same rules for tile aliasing, initialization, and data inheritance as placed resources. See [CreatePlacedResource](resources.md#create-placed-resource) for more details.
+Here are some examples of common **UpdateTileMappings** cases:
+
+#### Examples
+
+The examples reference the following structures and enums:
+
+- [D3D12_TILED_RESOURCE_COORDINATE](resources.md#d3d12-tiled-resource-coordinate)
+- [D3D12_TILE_REGION_SIZE](resources.md#d3d12-tile-region-size)
+- [D3D12_TILE_RANGE_FLAGS](resources.md#d3d12-tile-range-flags)
+
+ Clearing an entire surface's mappings to NULL
+
+```cpp
+// - NULL for pResourceRegionStartCoordinates and pResourceRegionSizes defaults to the entire resource
+// - NULL for pHeapRangeStartOffsets since it isn't needed for mapping tiles to NULL
+// - NULL for pRangeTileCounts when NumRanges is 1 defaults to the same number of tiles as the resource region (which is
+//   the entire surface in this case)
+//
+D3D12_TILE_RANGE_FLAGS RangeFlags = D3D12_TILE_RANGE_FLAG_NULL;
+pCommandQueue->UpdateTileMappings(pResource, 1, NULL, NULL, NULL, 1, &RangeFlags, NULL, NULL, D3D12_TILE_MAPPING_FLAG_NONE);
+
+```
+
+Mapping a region of tiles to a single tile:
+
+```cpp
+// - This maps a 2x3 tile region at tile offset (1,1) in a resource to tile [12] in a heap
+//
+D3D12_TILED_RESOURCE_COORDINATE TRC{};
+TRC.X = 1;
+TRC.Y = 1;
+TRC.Z = 0;
+TRC.Subresource = 0;
+
+D3D12_TILE_REGION_SIZE TRS{};
+TRS.UseBox = TRUE;
+TRS.Width = 2;
+TRS.Height = 3;
+TRS.Depth = 1;
+TRS.NumTiles = TRS.Width * TRS.Height * TRS.Depth;
+
+D3D12_TILE_RANGE_FLAGS RangeFlags = D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE;
+UINT StartOffset = 12;
+
+pCommandQueue->UpdateTileMappings(pResource,1,&TRC,&TRS,pHeap,1,&RangeFlags,&StartOffset,NULL,D3D12_TILE_MAPPING_FLAG_NONE);
+
+```
+
+Defining mappings for a set of disjoint individual tiles:
+
+```cpp
+// - This can also be accomplished in multiple calls.
+//   A single call to define multiple mapping updates can reduce CPU call overhead slightly,
+//   at the cost of having to pass arrays as parameters.
+// - Passing NULL for pResourceRegionSizes defaults to each region in the resource
+//   being a single tile.  So all that is needed are the coordinates of each one.
+// - Passing NULL for pRangeFlags defaults to no flags (since none are needed in this case)
+// - Passing nullptr for pRangeTileCounts defaults each heap range to one tile.
+//
+D3D12_TILED_RESOURCE_COORDINATE TRC[3]{};
+UINT StartOffsets[3];
+UINT NumSingleTiles = 3;
+TRC[0].X = 1;
+TRC[0].Y = 1;
+TRC[0].Subresource = 0;
+
+StartOffsets[0] = 1;
+TRC[1].X = 4;
+TRC[1].Y = 7;
+TRC[1].Subresource = 0;
+StartOffsets[1] = 4;
+
+TRC[2].X = 2;
+TRC[2].Y = 3;
+TRC[2].Subresource = 0;
+StartOffsets[2] = 7;
+
+pCommandQueue->UpdateTileMappings(pResource,NumSingleTiles,TRC,NULL,pHeap,NumSingleTiles,NULL,StartOffsets,
+nullptr,D3D12_TILE_MAPPING_FLAG_NONE);
+
+```
+
+Complex example - defining mappings for regions with some skips, some NULL mappings.
+
+```cpp
+// - This complex example hard codes the parameter arrays, whereas in practice the
+//   application would likely configure the parameters programatically or in a data driven way.
+// - Suppose we have 3 regions in a resource to configure mappings for, 2x3 at coordinate (1,1),
+//   3x3 at coordinate (4,7), and 7x1 at coordinate (20,30)
+// - The tiles in the regions are walked from first to last, in X then Y then Z order,
+//   while stepping forward through the specified Tile Ranges to determine each mapping.
+//   In this example, 22 tile mappings need to be defined.
+// - Suppose we want the first 3 tiles to be mapped to a contiguous range in the heap starting at
+//   heap location [9], the next 8 to be skipped (left unchanged), the next 2 to map to NULL,
+//   the next 5 to share a single tile (heap location [17]) and the remaining
+//   4 tiles to each map to to unique heap locations, [2], [9], [4] and [17]:
+//
+D3D12_TILED_RESOURCE_COORDINATE TRC[3]{};
+D3D12_TILE_REGION_SIZE TRS[3]{};
+UINT NumRegions = 3;
+
+TRC[0].X = 1;
+TRC[0].Y = 1;
+TRC[0].Subresource = 0;
+TRS[0].UseBox = TRUE;
+TRS[0].Depth = 1;
+TRS[0].Width = 2;
+TRS[0].Height = 3;
+TRS[0].NumTiles = TRS[0].Width * TRS[0].Height;
+
+TRC[1].X = 4;
+TRC[1].Y = 7;
+TRC[1].Subresource = 0;
+TRS[1].UseBox = TRUE;
+TRS[1].Depth = 1;
+TRS[1].Width = 3;
+TRS[1].Height = 3;
+TRS[1].NumTiles = TRS[1].Width * TRS[1].Height;
+
+TRC[2].X = 20;
+TRC[2].Y = 30;
+TRC[2].Subresource = 0;
+TRS[2].UseBox = TRUE;
+TRS[2].Depth = 1;
+TRS[2].Width = 7;
+TRS[2].Height = 1;
+TRS[2].NumTiles = TRS[2].Width * TRS[2].Height;
+
+UINT NumRanges = 8;
+D3D12_TILE_RANGE_FLAGS RangeFlags[8];
+UINT HeapRangeStartOffsets[8];
+UINT RangeTileCounts[8];
+
+RangeFlags[0] = D3D12_TILE_RANGE_FLAG_NONE;
+HeapRangeStartOffsets[0] = 9;
+RangeTileCounts[0] = 3;
+
+RangeFlags[1] = D3D12_TILE_RANGE_FLAG_SKIP;
+HeapRangeStartOffsets[1] = 0; // offset is ignored for skip mappings
+RangeTileCounts[1] = 8;
+
+RangeFlags[2] = D3D12_TILE_RANGE_FLAG_NULL;
+HeapRangeStartOffsets[2] = 0; // offset is ignored for NULL mappings
+RangeTileCounts[2] = 2;
+
+RangeFlags[3] = D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE;
+HeapRangeStartOffsets[3] = 17;
+RangeTileCounts[3] = 5;
+
+RangeFlags[4] = D3D12_TILE_RANGE_FLAG_NONE;
+HeapRangeStartOffsets[4] = 2;
+RangeTileCounts[4] = 1;
+
+RangeFlags[5] = D3D12_TILE_RANGE_FLAG_NONE;
+HeapRangeStartOffsets[5] = 9;
+RangeTileCounts[5] = 1;
+
+RangeFlags[6] = D3D12_TILE_RANGE_FLAG_NONE;
+HeapRangeStartOffsets[6] = 4;
+RangeTileCounts[6] = 1;
+
+RangeFlags[7] = D3D12_TILE_RANGE_FLAG_NONE;
+HeapRangeStartOffsets[7] = 17;
+RangeTileCounts[7] = 1;
+
+pCommandQueue->UpdateTileMappings(pResource,NumRegions,TRC,TRS,pHeap,NumRanges,RangeFlags,
+HeapRangeStartOffsets,RangeTileCounts,D3D12_TILE_MAPPING_FLAG_NONE);
+
+```
+
+The coordinate/region arrays have `NumResourceRegions` entries and the range arrays have `NumRanges` entries when supplied. A null heap-offset array defaults heap offsets to zero. When `NumRanges` is one, a null `pRangeTileCounts` consumes the total selected resource-region tile count. When `NumRanges` is greater than one, a null `pRangeTileCounts` defaults each range to one tile. A null range-flag array selects `NONE`. A `NULL` or `SKIP` range ignores its heap offset; `SKIP` still consumes resource-region tiles. `REUSE_SINGLE_TILE` consumes its resource count while using only one physical heap tile. The resource and range streams must have equal total tile counts.
+
+A sequential heap range must fit the heap; a reused tile requires one valid heap tile. Tile offsets count 65536-byte tiles, not bytes. Resource-region bounds and arithmetic must remain valid even when a range is skipped or NULL-mapped. When no heap is supplied, ranges must not request physical mappings: only NULL and SKIP ranges are applicable.
+
+The runtime consumes the CPU coordinate, region, flag, offset and count arrays during the call; their storage need not remain valid until GPU execution. Resource and heap object lifetimes and residency extend through the GPU work that references them under the [execution lifetime contract](execution.md#lifetime).
+
+`UpdateTileMappings` and `CopyTileMappings` are supported on `D3D12_COMMAND_LIST_TYPE_DIRECT`, `D3D12_COMMAND_LIST_TYPE_COMPUTE` and `D3D12_COMMAND_LIST_TYPE_COPY` queues. They are not supported on video queues. Mapping changes are queue operations, not command-list recordings. They are ordered with operations submitted to the same queue; other queues require the [common queue synchronization contract](synchronization.md#queue-compatibility). [CPU free-threading](execution.md#threading) and [runtime/DDI queue-lock serialization](execution.md#driver-responsibilities) do not imply GPU completion. The call returns no HRESULT.
+
+#### Debug layer
+
+The checked layer diagnoses zero `NumResourceRegions`, zero `NumRanges`, zero `NumTiles` in an explicitly supplied region, mismatched stream totals, invalid range flags and out-of-bounds resource/heap ranges. This is not a promise that every retail call is sanitized or returns an error result.
+
+**Diagnostic compatibility note:** The selected checked-layer implementation rejects a null `pRangeTileCounts` when `NumRanges` is greater than one. That diagnostic is stricter than the supported one-tile-per-range default and does not make this usage invalid.
+
+<a id="copy-tile-mappings"></a>
+
+### ID3D12CommandQueue::CopyTileMappings
+
+#### Declaration
+
+```cpp
+void CopyTileMappings(
+    ID3D12Resource *pDstResource,
+    const D3D12_TILED_RESOURCE_COORDINATE *pDstRegionStartCoordinate,
+    ID3D12Resource *pSrcResource,
+    const D3D12_TILED_RESOURCE_COORDINATE *pSrcRegionStartCoordinate,
+    const D3D12_TILE_REGION_SIZE *pRegionSize,
+    D3D12_TILE_MAPPING_FLAGS Flags
+    );
+```
+
+#### Behavior
+
+Copies mappings from a source reserved resource to a destination reserved resource.
+
+#### Parameters
+
+`pDstResource`
+
+A pointer to the destination reserved resource.
+
+`pDstRegionStartCoordinate`
+
+A pointer to a [D3D12_TILED_RESOURCE_COORDINATE](resources.md#d3d12-tiled-resource-coordinate) structure that describes the starting coordinates of the destination reserved resource.
+
+`pSrcResource`
+
+A pointer to the source reserved resource.
+
+`pSrcRegionStartCoordinate`
+
+A pointer to a [D3D12_TILED_RESOURCE_COORDINATE](resources.md#d3d12-tiled-resource-coordinate) structure that describes the starting coordinates of the source reserved resource.
+
+`pRegionSize`
+
+A pointer to a [D3D12_TILE_REGION_SIZE](resources.md#d3d12-tile-region-size) structure that describes the size of the reserved region.
+
+`Flags`
+
+One member of [D3D12_TILE_MAPPING_FLAGS](resources.md#d3d12-tile-mapping-flags).
+
+#### Return values
+
+None
+
+#### Operation requirements
+
+Use **CopyTileMappings** to copy the tile mappings from one reserved resource to another, either to duplicate a resource mapping, or to initialize a new mapping before modifying it using [UpdateTileMappings](resources.md#update-tile-mappings).
+
+**CopyTileMappings** helps with tasks such as shifting mappings around within and across reserved resources, for example, scrolling tiles. The source and destination regions can overlap; the result of the copy in this situation is as if the source was saved to a temporary location and from there written to the destination.
+
+The destination and the source regions must each entirely fit in their resource or behavior is undefined and the debug layer will emit an error.
+
+`pRegionSize` describes both regions using the [shared traversal rules](#tile-types). NULL mappings are copied as mappings; no tile contents are transferred. Existing destination mappings outside the region are unchanged, even when source mappings refer to a different heap. The supported flags and CPU/GPU lifetime/queue-order requirements are the same as for [UpdateTileMappings](#update-tile-mappings).
+
+<a id="tiled-driver"></a>
+
+## Tiled-resource driver contract
+
+The published driver interface uses `PFND3D12DDI_UPDATETILEMAPPINGS` and `PFND3D12DDI_COPYTILEMAPPINGS` on a command queue. `PFND3D12DDI_GETMIPPACKING` reports the implementation-specific packed mip count and packed-tile count; it is not a one-to-one `GetResourceTiling` DDI. The runtime combines those values with the defined standard tile shapes and subresource traversal.
+
+Reserved creation uses the common heap/resource creation DDIs without creating physical heap storage. The versioned creation arguments carry resource layout, initial barrier layout, castable formats and protected-session information as applicable. The existing [allocation driver contract](#allocation-driver) owns allocation size/alignment and resource lifetime.
+
+For the mapping DDI, a missing API coordinate is resolved to the origin before the driver call. A null DDI region-size array represents single-tile regions; the API's both-arrays-null whole-resource default instead supplies an explicit region size. The runtime resolves a single null range count to the total selected resource tile count. For multiple ranges, a null DDI range-count array means one tile per range. These CPU defaults do not turn out-of-bounds resource regions into valid mappings.
+
+The driver reports `TiledResourcesTier` in the versioned D3D12-options capability structure. `PFND3D12DDI_CHECKMULTISAMPLEQUALITYLEVELS` receives the tiled-resource quality-level flag and reports the number of supported quality levels for that format/sample count. These capability fields do not remove the tier-dependent standard/packed-mip restrictions.
+
+The mapping-update and mapping-copy driver callbacks use the following error reporting:
+
+Errors are reported via the call back `pfnSetErrorCb`.  Valid errors are out of memory and device removed.  On out of memory
+(possible if memory allocation for page table storage fails), tile mappings are left in their original state before the call.
+
+
+For a given tiled resource, `PFND3D12DDI_GETMIPPACKING` returns how many mips
+are packed and how many tiles are needed to store all the packed mips.
+Packed mips include cases where multiple small mips share tile(s) and
+also mips for which a given device cannot use standard tile shapes.  It is possible
+for an entire resource to be considered packed.
+
+Applications are not told the tile shapes/layout for packed mips and must simply map
+all or none of the packed tiles if any of the mipmaps are to be accessed.
+Otherwise the observed mapping of individual pixels accessed will be undefined - IHV specific.
+
+For array surfaces, the returned values are the counts for a single array slice,
+given the tile breakdown is identical for the mipmaps of each array slice.
+
+On Tier 2 and higher, mipmaps whose pixel dimensions fully fill at least one standard shaped tile in all
+dimensions are not allowed to be considered part of the set of packed mips, otherwise
+the runtime will remove the device on an invalid driver.
+One example of dimensions that a device can validly lump into
+the packed tiles (meaning the IHV can use its own custom tile breakdown) is
+a mip that is at least one tile wide but less than a tile high.  Ideally though,
+a device would stick with the standard tile breakdown for this case (so the application can
+manage the tiles in a standard way).  If a device does need to use a custom tiling,
+the application is not told what the tile breakdown is (only how many tiles are involved
+in the packing overall), and thus loses some freedom.
+
+<a id="tiled-driver-types"></a>
+
+### Shared driver tile coordinates and regions
+
+```cpp
+typedef struct D3D12DDI_TILED_RESOURCE_COORDINATE
+{
+    // Coordinate values below index tiles (not pixels or bytes).
+    UINT X; // Used for buffer, 1D, 2D, 3D
+    UINT Y; // Used for 2D, 3D
+    UINT Z; // Used for 3D
+    UINT Subresource; // indexes into mips, arrays. Used for 1D, 2D, 3D
+    // For mipmaps that are packed into a single tile, any subresource
+    // value that indicates any of the packed mips all refer to the same tile.
+} D3D12DDI_TILED_RESOURCE_COORDINATE;
+```
+
+```cpp
+typedef struct D3D12DDI_TILE_REGION_SIZE
+{
+    UINT NumTiles;
+    BOOL UseBox;  // TRUE: Uses width/height/depth parameters below to define the region.
+                  //   Width*Height*Depth must match NumTiles above.  (While
+                  //   this looks like redundant information, the application likely has to know
+                  //   how many tiles are involved anyway.)
+                  //   The downside to using the box parameters is that one update region cannot
+                  //   span mipmaps (though it can span array slices via the depth parameter).
+                  //
+                  // FALSE: Ignores width/height/depth parameters - NumTiles just traverses tiles in
+                  //   the resource linearly across x, then y, then z (as applicable) then spilling over
+                  //   mips/arrays in subresource order.  Useful for just mapping an entire resource
+                  //   at once.
+                  //
+                  // In either case, the starting location for the region within the resource
+                  // is specified as a separate parameter outside this struct.
+
+    UINT Width;   // Used for buffer, 1D, 2D, 3D
+    UINT16 Height; // Used for 2D, 3D
+    UINT16 Depth; // For 3D or arrays.  For arrays, advancing in depth skips to next slice of same mip size.
+} D3D12DDI_TILE_REGION_SIZE;
+```
+
+<a id="tiled-driver-callbacks"></a>
+
+### Mapping, mip-packing, creation and capability callbacks
+
+```cpp
+typedef VOID ( APIENTRY* PFND3D12DDI_UPDATETILEMAPPINGS )( D3D12DDI_HCOMMANDQUEUE, D3D12DDI_HRESOURCE,
+    UINT NumTiledResourceRegions,
+    _In_reads_(NumTiledResourceRegions) const D3D12DDI_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoords,
+    _In_reads_opt_(NumTiledResourceRegions) const D3D12DDI_TILE_REGION_SIZE* pResourceRegionSizes,
+    D3D12DDI_HHEAP, UINT NumRanges,
+    _In_reads_opt_(NumRanges) const D3D12DDI_TILE_RANGE_FLAGS*,
+    _In_reads_opt_(NumRanges) const UINT* pHeapStartOffsets,
+    _In_reads_opt_(NumRanges) const UINT* pRangeTileCounts,
+    D3D12DDI_TILE_MAPPING_FLAGS );
+```
+
+```cpp
+typedef VOID ( APIENTRY* PFND3D12DDI_COPYTILEMAPPINGS )( D3D12DDI_HCOMMANDQUEUE,
+    D3D12DDI_HRESOURCE hDstResource, _In_ const D3D12DDI_TILED_RESOURCE_COORDINATE* pDstRegionStartCoord,
+    D3D12DDI_HRESOURCE hSrcResource, _In_ const D3D12DDI_TILED_RESOURCE_COORDINATE* pSrcRegionStartCoord,
+    _In_ const D3D12DDI_TILE_REGION_SIZE*, D3D12DDI_TILE_MAPPING_FLAGS );
+```
+
+```cpp
+typedef VOID ( APIENTRY* PFND3D12DDI_GETMIPPACKING )(
+    D3D12DDI_HDEVICE hDevice,
+    D3D12DDI_HRESOURCE hTiledResource,
+    _Out_ UINT* pNumPackedMips,
+    _Out_ UINT* pNumTilesForPackedMips
+);
+```
+
+```cpp
+typedef enum D3D12DDI_TILED_RESOURCES_TIER
+{
+    D3D12DDI_TILED_RESOURCES_TIER_NOT_SUPPORTED  = 0,
+    D3D12DDI_TILED_RESOURCES_TIER_1              = 1,
+    D3D12DDI_TILED_RESOURCES_TIER_2              = 2,
+    D3D12DDI_TILED_RESOURCES_TIER_3              = 3,
+    D3D12DDI_TILED_RESOURCES_TIER_0117_4         = 4,
+} D3D12DDI_TILED_RESOURCES_TIER;
+```
+
+```cpp
+typedef enum D3D12DDI_TILE_MAPPING_FLAGS
+{
+    D3D12DDI_TILE_MAPPING_FLAG_NONE = 0x0, // Constant for no flags
+    D3D12DDI_TILE_MAPPING_FLAG_NO_HAZARD = 0x1,
+} D3D12DDI_TILE_MAPPING_FLAGS;
+```
+
+```cpp
+typedef enum D3D12DDI_TILE_RANGE_FLAGS
+{
+    D3D12DDI_TILE_RANGE_FLAG_NONE = 0x0, // Constant for no flags
+    D3D12DDI_TILE_RANGE_FLAG_NULL = 0x1,
+    D3D12DDI_TILE_RANGE_FLAG_SKIP = 0x2,
+    D3D12DDI_TILE_RANGE_FLAG_REUSE_SINGLE_TILE = 0x4,
+} D3D12DDI_TILE_RANGE_FLAGS;
+```
+
+```cpp
+typedef struct D3D12DDI_D3D12_OPTIONS_DATA_0003
+{
+    D3D12DDI_RESOURCE_BINDING_TIER ResourceBindingTier;
+    D3D12DDI_CONSERVATIVE_RASTERIZATION_TIER ConservativeRasterizationTier;
+    D3D12DDI_TILED_RESOURCES_TIER TiledResourcesTier;
+    D3D12DDI_CROSS_NODE_SHARING_TIER CrossNodeSharingTier;
+    BOOL VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation;
+    BOOL OutputMergerLogicOp;
+    D3D12DDI_RESOURCE_HEAP_TIER ResourceHeapTier;
+} D3D12DDI_D3D12_OPTIONS_DATA_0003;
+```
+
+```cpp
+typedef VOID ( APIENTRY* PFND3D12DDI_CHECKMULTISAMPLEQUALITYLEVELS )(
+    D3D12DDI_HDEVICE hDevice,
+    DXGI_FORMAT Format,
+    UINT SampleCount,
+    D3D12DDI_MULTISAMPLE_QUALITY_LEVEL_FLAGS Flags,
+    _Out_ UINT* pNumQualityLevels
+);
+```
+
+```cpp
+typedef enum D3D12DDI_MULTISAMPLE_QUALITY_LEVEL_FLAGS
+{
+    D3D12DDI_MULTISAMPLE_QUALITY_LEVEL_FLAG_NONE            = 0,
+    D3D12DDI_MULTISAMPLE_QUALITY_LEVEL_FLAG_TILED_RESOURCE  = 0x1
+} D3D12DDI_MULTISAMPLE_QUALITY_LEVEL_FLAGS;
+```
+
+```cpp
+typedef struct D3D12DDIARG_CREATERESOURCE_0088
+{
+    D3D12DDIARG_BUFFER_PLACEMENT    ReuseBufferGPUVA;
+    D3D12DDI_RESOURCE_TYPE          ResourceType;
+    UINT64                          Width; // Virtual coords
+    UINT                            Height; // Virtual coords
+    UINT16                          DepthOrArraySize;
+    UINT16                          MipLevels;
+    DXGI_FORMAT                     Format;
+    DXGI_SAMPLE_DESC                SampleDesc;
+    D3D12DDI_TEXTURE_LAYOUT         Layout; // See standard swizzle spec
+    D3D12DDI_RESOURCE_FLAGS_0003    Flags;
+    D3D12DDI_BARRIER_LAYOUT         InitialBarrierLayout;
+
+    // When Layout = D3D12DDI_TL_ROW_MAJOR and pRowMajorLayout is non-null
+    // then *pRowMajorLayout specifies the layout of the resource
+    CONST D3D12DDIARG_ROW_MAJOR_RESOURCE_LAYOUT* pRowMajorLayout;
+
+    D3D12DDI_MIP_REGION_0075       SamplerFeedbackMipRegion;
+    UINT32                          NumCastableFormats;
+    const DXGI_FORMAT *             pCastableFormats;
+} D3D12DDIARG_CREATERESOURCE_0088;
+```
+
+```cpp
+typedef HRESULT ( APIENTRY* PFND3D12DDI_CREATEHEAPANDRESOURCE_0088)(
+    D3D12DDI_HDEVICE, _In_opt_ CONST D3D12DDIARG_CREATEHEAP_0001*, D3D12DDI_HHEAP, D3D12DDI_HRTRESOURCE,
+    _In_opt_ CONST D3D12DDIARG_CREATERESOURCE_0088*, _In_opt_ CONST D3D12DDI_CLEAR_VALUES*,
+    D3D12DDI_HPROTECTEDRESOURCESESSION_0030, D3D12DDI_HRESOURCE );
+```
+
+```cpp
+typedef VOID ( APIENTRY* PFND3D12DDI_CHECKRESOURCEALLOCATIONINFO_0088)(
+    D3D12DDI_HDEVICE, _In_ CONST D3D12DDIARG_CREATERESOURCE_0088*, D3D12DDI_RESOURCE_OPTIMIZATION_FLAGS,
+    UINT32 AlignmentRestriction, UINT VisibleNodeMask, _Out_ D3D12DDI_RESOURCE_ALLOCATION_INFO_0022* );
+```
+
 <a id="resource-contracts"></a>
 
 ## Descriptions, creation and synchronization
@@ -772,6 +2384,14 @@ typedef enum D3D12_HEAP_TYPE
     D3D12_HEAP_TYPE_GPU_UPLOAD = 5,
 } D3D12_HEAP_TYPE;
 ```
+
+<a id="compute-only-heap-support"></a>
+
+### Compute-only heap support
+
+For a device whose maximum supported feature level is `D3D_FEATURE_LEVEL_1_0_CORE`, a `FALSE` value of `D3D12_FEATURE_DATA_D3D12_OPTIONS19::ComputeOnlyCustomHeapSupported` prohibits all `D3D12_HEAP_TYPE_CUSTOM` creation, including implicit heaps for committed resources. A `FALSE` value of `D3D12_FEATURE_DATA_D3D12_OPTIONS20::ComputeOnlyWriteWatchSupported` prohibits all uses of `D3D12_HEAP_FLAG_ALLOW_WRITE_WATCH` on that device class. A `TRUE` result does not waive the other heap-type, flag, resource or creation requirements.
+
+These two options are irrelevant for devices whose maximum supported feature level is higher. Classification uses the device's maximum supported feature level, not the minimum requested when creating it: requesting `1_0_CORE` on a more capable adapter does not make these restrictions apply. [Feature discovery](devices-and-capabilities.md#feature-discovery) defines the query mechanism.
 
 ### D3D12_HEAP_TYPE_DEFAULT
 

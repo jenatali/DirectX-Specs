@@ -37,7 +37,7 @@ These are command-list binding and recording-context rules, not resource-data in
 
 ## Support and applicability
 
-An available command-list interface does not by itself advertise optional hardware support. The relevant `CheckFeatureSupport` members are listed below; members named OPTIONSn belong to `D3D12_FEATURE_DATA_D3D12_OPTIONSn`. A supported tier/TRUE result and the applicable PSO flags describe availability of the optional functionality. This table is not an extra validation rule for no-op calls or a substitute for each method's usage constraints. Listing an initial value does not advertise support.
+An available command-list interface does not by itself advertise optional hardware support. [Devices and capabilities](devices-and-capabilities.md#feature-discovery) defines the shared interface, feature-level and capability-query distinctions. The relevant `CheckFeatureSupport` members are listed below; members named OPTIONSn belong to `D3D12_FEATURE_DATA_D3D12_OPTIONSn`. A supported tier/TRUE result and the applicable PSO flags describe availability of the optional functionality. This table is not an extra validation rule for no-op calls or a substitute for each method's usage constraints. Listing an initial value does not advertise support.
 
 | Contribution | Support member |
 |---|---|

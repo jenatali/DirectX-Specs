@@ -167,13 +167,7 @@ typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS9
 
 ### D3D12_FEATURE_DATA_D3D12_OPTIONS10
 
-```cpp
-typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS10
-{
-    BOOL VariableRateShadingSumCombinerSupported;
-    BOOL MeshShaderPerPrimitiveShadingRateSupported;
-} D3D12_FEATURE_DATA_D3D12_OPTIONS10;
-```
+The shared `D3D12_FEATURE_DATA_D3D12_OPTIONS10` declaration is defined in [Pixel shaders](pixel-shaders.md#vrs-types).
 
 <a id="d3d12_tri_state"></a>
 

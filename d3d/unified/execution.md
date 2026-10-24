@@ -874,8 +874,8 @@ DXGI Present and Blt DDIs. Drivers can thus assume that the following
 DDI calls are serialized:
 
 - ExecuteCommandLists
-- UpdateTileMappings
-- CopyTileMappings
+- [UpdateTileMappings](resources.md#update-tile-mappings)
+- [CopyTileMappings](resources.md#copy-tile-mappings)
 
 ### Command-list resource lifetime
 

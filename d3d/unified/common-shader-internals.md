@@ -284,7 +284,7 @@ A potentially non-uniform resource or sampler index must carry the `NonUniformRe
 
 Typed accesses use the resource dimension's element coordinates. Raw accesses use byte offsets; structured accesses use a structure index and byte offset within the structure. [DXBC alignment](memory-model.md#shared-memory-alignment) and [resource/shared-memory access bounds](memory-model.md#shared-memory-bounds) define their distinct invalid and out-of-bounds cases. DXIL raw-buffer alignment and native 16-bit accesses are operation/type dependent, not a universal four-byte rule. [Typed UAV load support](formats.md#typed-uav-loads) is a device-and-format contract, distinct from ordinary SRV texture loads.
 
-Memory ordering, races, atomicity and coherency are defined by the [memory model](memory-model.md#memory-consistency); [shader barriers](memory-model.md#shader-barriers) are not implied by texture filtering or wave collectives. [Resource layouts and synchronization](synchronization.md#layout-transitions) and [reserved-resource mapping](resources.md#reserved-resources) remain resource/command contracts. [Rasterizer-ordered access](pixel-shaders.md#rovs) remains a pixel-shader contract.
+Memory ordering, races, atomicity and coherency are defined by the [memory model](memory-model.md#memory-consistency); [shader barriers](memory-model.md#shader-barriers) are not implied by texture filtering or wave collectives. [Resource layouts and synchronization](synchronization.md#layout-transitions) and [reserved-resource mapping](resources.md#reserved-resources) remain resource/command contracts. [Rasterizer-ordered access](pixel-shaders.md#rovs) remains a pixel-shader contract. The SM 6.8 [Barrier intrinsic](work-graphs.md#barrier) defines explicit memory-type/scope flags, stage legality and record-object overloads; this is distinct from command-list barriers.
 
 <a id="dxil-model"></a>
 
@@ -1345,9 +1345,9 @@ Packed-mip texture-array availability follows the [tier-specific resource-creati
 
 ### Shader Feedback About Mapped Areas
 
-Any instruction that reads and/or writes to a Tiled Resource causes status
-information to be recorded. This is exposed as an optional extra return value on every
-resource access instruction that goes into a 32-bit temp register.
+In DXBC, a resource-read instruction with a mapping-status return causes status
+information to be recorded. This is exposed as an optional extra return value on the
+listed resource-read instruction forms, in a 32-bit temp register.
 The contents of the return value are opaque - direct reading
 by the shader program is disallowed. However dedicated instruction(s) (initially only one) allow
 status information to be extracted.
@@ -1396,6 +1396,134 @@ The lod instruction (which predates the per-sample minLOD clamp described here) 
 reflects all clamping including the per-resource clamp, but not a per-sample clamp. Per-sample clamp is controlled/known by the shader anyway, so the
 shader author can manually apply that clamp to the lod instruction's return value if desired.
 
+<a id="mapping-feedback-instructions"></a>
+
+### DXBC mapping-status and clamp instruction forms
+
+The following shader instructions include combinations of feedback and/or clamp in addition to their basic operation, followed by instructions that examine the feedback return.
+If the clamp is used, it is an additional scalar float32 register or immediate operand. If feedback is requested, it comes out in an additional 32 bit scalar register operand that
+needs to be fed into instruction(s) that interpret feedback.
+
+These instructions can be used on Tiled or non-Tiled Resources for all applicable resource dimensions (Buffer, Texture1D/2D/3D). Non-Tiled Resources always appear to be fully mapped.
+
+The suffix `_s` indicates mapping status, and `_cl` indicates LOD clamp.
+
+The following instructions have a mapping status return option [_s] (but no clamp option):
+
+* [`gather4[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_GATHER4)
+* [`gather4_c[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_GATHER4_C)
+* [`gather4_po[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_GATHER4_PO)
+* [`gather4_po_c[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_GATHER4_PO_C)
+* [`ld[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_LD)
+* [`ld2dms[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_LD2DMS)
+* [`ld_uav_typed[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_LD_UAV_TYPED)
+* [`ld_raw[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_LD_RAW)
+* [`ld_structured[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_LD_STRUCTURED)
+* [`sample_l[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_SAMPLE_L)
+* [`sample_c_lz[_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_SAMPLE_C_LZ)
+
+The following instructions have both mapping status [_s] and clamp [_cl] options:
+
+* [`sample[_cl][_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_SAMPLE)
+* [`sample_b[_cl][_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_SAMPLE_B)
+* [`sample_d[_cl][_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_SAMPLE_D)
+* [`sample_c[_cl][_s]`](../archive/D3D11_3_FunctionalSpec.htm#inst_SAMPLE_C)
+
+The following instruction examines the status return from any of the above instructions:
+
+* `check_access_mapped`
+
+There is no mapping-status feedback for memory write instructions such as `store_uav_*`.
+
+<a id="mapping-feedback-hlsl"></a>
+
+### HLSL mapping-status and clamp arguments
+
+The following HLSL overloads expose mapping status and/or a per-sample LOD clamp. Their device capability conditions follow the [tiled-resource tier contract](resources.md#tiled-tiers).
+Each relevant HLSL intrinsic method for tiled resources (see the table below)
+accepts either one (feedback) or two (clamp
+and feedback in this order) additional
+optional parameters. For example, an offset-bearing `Texture2D.Sample` overload has this argument order:
+
+```hlsl
+Sample(sampler, location [, offset [, clamp [, feedback]]]);
+```
+
+The offset,
+clamp and
+feedback parameters are optional.
+For offset-bearing texture overloads, programmers have to specify all optional parameters up to the one they need,
+which is consistent with the C++ rules for default function arguments. For
+example, if the feedback status is
+needed, both offset and
+clamp parameters need to be explicitly
+supplied to Sample, even though they may not be logically needed.
+
+For `TextureCube` and `TextureCubeArray`, the corresponding status form is `Sample(sampler, location, clamp, feedback)`; there is no texture-offset parameter.
+
+The clamp
+parameter is a scalar float value. The literal value of
+clamp=0.0f indicates that clamp
+operation is not performed.
+
+The feedback
+parameter is a uint variable that can
+be supplied to memory-access querying intrinsic: CheckAccessFullyMapped. Programmers must not modify or interpret the value of the
+feedback parameter; however, the
+compiler does not provide any advanced analysis and diagnostics to detect this.
+
+There is one HLSL intrinsic to query the feedback status:
+
+```hlsl
+bool CheckAccessFullyMapped(in uint FeedbackVar);
+```
+
+CheckAccessFullyMapped
+interprets the value of FeedbackVar
+and returns true if all data being
+accessed was mapped in the resource; otherwise,
+CheckAccessFullyMapped returns
+false.
+
+In DXBC compilation, if either clamp
+or feedback parameter is present, the
+compiler emits a variant of the basic instruction. For example, the DXBC lowering of Sample with these options generates the `sample_cl_s` instruction. If neither
+clamp nor
+feedback is specified, the compiler
+emits the basic instruction, so that there is no change from the current
+behavior. The clamp value of 0.0f
+indicates that no clamp is performed; thus, the driver compiler can further
+tailor the instruction to the target hardware. If
+feedback is a NULL register in an
+instruction, the feedback is unused;
+thus, the driver compiler can further tailor the instruction to the target
+architecture.
+
+If the HLSL compiler infers that
+clamp is 0.0f and feedback
+is unused, the compiler emits the corresponding basic instruction (e.g., sample
+rather than sample_cl_s).
+
+If a tiled resource access consists of several constituent
+byte code instructions, e.g., for structured resources, the compiler aggregates
+individual feedback values via the OR operation to produce the final feedback
+value. Therefore, programmers see a single feedback value for such a complex
+access.
+
+The following table summarizes the listed HLSL mapping-status and clamp overloads.
+They work on tiled and non-tiled resources of the applicable object types.
+Non-tiled resources always appear to be fully mapped.
+
+| HLSL objects | Mapping-status methods; * also has a LOD-clamp option |
+|---|---|
+| `Texture1D`, `Texture1DArray` | `Load`, `Sample`*, `SampleBias`*, `SampleCmp`*, `SampleCmpLevelZero`, `SampleGrad`*, `SampleLevel` |
+| `Texture2D`, `Texture2DArray` | `Load`, `Sample`*, `SampleBias`*, `SampleCmp`*, `SampleCmpLevelZero`, `SampleGrad`*, `SampleLevel`; `Gather`, `GatherRed`, `GatherGreen`, `GatherBlue`, `GatherAlpha`, `GatherCmp`, `GatherCmpRed`, `GatherCmpGreen`, `GatherCmpBlue`, `GatherCmpAlpha` |
+| `TextureCube`, `TextureCubeArray` | `Sample`*, `SampleBias`*, `SampleCmp`*, `SampleCmpLevelZero`, `SampleGrad`*, `SampleLevel`; `Gather`, `GatherRed`, `GatherGreen`, `GatherBlue`, `GatherAlpha`, `GatherCmp`, `GatherCmpRed`, `GatherCmpGreen`, `GatherCmpBlue`, `GatherCmpAlpha` |
+| `Texture3D` | `Load`, `Sample`*, `SampleBias`*, `SampleGrad`*, `SampleLevel` |
+| `Texture2DMS`, `Texture2DMSArray`; `Buffer`, `RWBuffer`; `RWTexture1D`, `RWTexture1DArray`, `RWTexture2D`, `RWTexture2DArray`, `RWTexture3D`; `ByteAddressBuffer`, `RWByteAddressBuffer`, `StructuredBuffer`, `RWStructuredBuffer` | `Load` |
+
+This table describes the listed mapping-status families, not every later shader-model overload. Sampler-based methods are not methods of RW texture objects. Texture3D does not acquire the comparison-sampling methods from the other texture rows. Method-specific coordinate, offset and result signatures remain part of the shader reference; raw-buffer `Load2`/`Load3`/`Load4` follow their load-family status rules.
+
 <a id="minmax-filtering"></a>
 
 ## Minimum and maximum reduction filters
@@ -1416,7 +1544,7 @@ min/max these texels still do not contribute to the result (and the weights do n
 
 The full list of filter modes is defined by [D3D12_FILTER in Binding](binding.md#sampler-fields) - note the modes with MINIMUM and MAXIMUM in the name.
 
-Support for this feature depends on [Tier](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#TiledResourcesFeatureTiers) 2 support for Tiled Resources.
+Support for this feature depends on [Tier](resources.md#tiled-tiers) 2 support for Tiled Resources.
 
 <a id="comparison-sampling"></a>
 

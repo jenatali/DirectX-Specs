@@ -304,7 +304,7 @@ With AS active, API DispatchMesh dimensions launch the parent AS groups; without
 
 ### Work-graph grid configuration
 
-The work-graph row applies to grids sourced from CPU-input records, GPU-input records and shader-produced records. Dynamic grids must also fit the node's configured maximum grid. The [fixed/dynamic shader grid declarations](../WorkGraphs.md#shader-function-attributes) and [state-object grid overrides](state-objects.md#d3d12_broadcasting_launch_overrides) remain separate program-configuration contracts; the independent 24-bit total remains even when the device's compute 1D capability is larger.
+The work-graph row applies to grids sourced from CPU-input records, GPU-input records and shader-produced records. Dynamic grids must also fit the node's configured maximum grid. The [fixed/dynamic shader grid declarations](work-graphs.md#shader-function-attributes) and [state-object grid overrides](state-objects.md#d3d12_broadcasting_launch_overrides) remain separate program-configuration contracts; the independent 24-bit total remains even when the device's compute 1D capability is larger.
 
 Directly authored `NodeDispatchGrid` and `NodeMaxDispatchGrid` attributes in the fixed shader-compiler contract require positive per-axis values at most 65,535 and a total at most 16,777,215. That compile-time attribute constraint is not interchangeable with the expanded execution-grid capability. State-object dispatch-grid or maximum-grid overrides can supply expanded one-dimensional X values, subject to the configured-grid and total constraints above. CPU-input record validation does not imply that GPU-input or shader-produced record dimensions are CPU-validated.
 

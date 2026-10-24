@@ -223,7 +223,7 @@ One of the state object [types](#d3d12_state_object_type) is
 `D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE`, or
 raytracing pipeline state object - RTPSO for short. An RTPSO
 represents a full set of shaders that could be reachable by a
-[DispatchRays](../Raytracing.md#dispatchrays) call, with all configuration options resolved,
+[DispatchRays](raytracing-pipelines.md#id3d12graphicscommandlist4dispatchrays) call, with all configuration options resolved,
 such as local root signatures and other state.
 
 An RTPSO can be thought of as an *executable* state object.
@@ -527,7 +527,7 @@ is RTPSO (executable).
 
 ### Subobject associations for hit groups
 
-[Hit groups](../Raytracing.md#hit-groups) reference a set of component shaders, such as
+[Hit groups](raytracing-pipelines.md#hit-groups) reference a set of component shaders, such as
 a closest hit shader, any hit shader, and/or intersection shader.
 Subobject associations (like associating a local root signature to a
 shader) can be made directly to the individual component shaders used by
@@ -714,7 +714,7 @@ root signature.
 
 Different shaders can use different global root signatures (or none)
 within a state object, however any shaders referenced during a
-particular [DispatchRays()](../Raytracing.md#dispatchrays) operation from a
+particular [DispatchRays()](raytracing-pipelines.md#id3d12graphicscommandlist4dispatchrays) operation from a
 CommandList must have specified the same global root signature as what
 has been set on the CommandList as the compute root signature. So it is
 valid to define a single large state object with multiple global root
@@ -755,7 +755,7 @@ root signature or none, and the shader entry (the root of the call
 graph) must be associated with the local root signature.
 
 This corresponds to the fact that the set of code reachable from a given
-shader entry gets invoked from a shader identifier in a [shader record](../Raytracing.md#shader-record), where a single set of local root arguments apply. Of course different shaders can use
+shader entry gets invoked from a shader identifier in a [shader record](raytracing-pipelines.md#shader-record), where a single set of local root arguments apply. Of course different shaders can use
 different local root signatures (or none), as their shader identifiers
 will be in different shader records.
 
@@ -857,8 +857,8 @@ must all match when combined into a raytracing pipeline.
 
 Member                              | Definition
 ---------                           | ----------
-`UINT MaxPayloadSizeInBytes` | The maximum storage for scalars (counted as 4 bytes each) in ray payloads in raytracing pipelines that contain this program.  Callable shader payloads are not part of this limit.  This field is ignored for payloads that use [payload access qualifiers](../Raytracing.md#payload-access-qualifiers).
-`UINT MaxAttributeSizeInBytes` | The maximum storage in bytes for scalars (counted as 4 bytes each) that can be used for attributes in pipelines that contain this shader. The value cannot exceed [D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES](../Raytracing.md#constants).
+`UINT MaxPayloadSizeInBytes` | The maximum storage for scalars (counted as 4 bytes each) in ray payloads in raytracing pipelines that contain this program.  Callable shader payloads are not part of this limit.  This field is ignored for payloads that use [payload access qualifiers](raytracing-pipelines.md#payload-access-qualifiers).
+`UINT MaxAttributeSizeInBytes` | The maximum storage in bytes for scalars (counted as 4 bytes each) that can be used for attributes in pipelines that contain this shader. The value cannot exceed [D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES](raytracing-pipelines.md#constants).
 
 <a id="d3d12_raytracing_pipeline_config"></a>
 
@@ -882,7 +882,7 @@ must all match when combined into a raytracing pipeline.
 
 Member                              | Definition
 ---------                           | ----------
-`UINT MaxTraceRecursionDepth` | Limit on ray recursion for the raytracing pipeline. See [Ray recursion limit](../Raytracing.md#ray-recursion-limit).
+`UINT MaxTraceRecursionDepth` | Limit on ray recursion for the raytracing pipeline. See [Ray recursion limit](raytracing-pipelines.md#ray-recursion-limit).
 
 <a id="d3d12_raytracing_pipeline_config1"></a>
 
@@ -909,7 +909,7 @@ must all match when combined into a raytracing pipeline.
 
 Member                              | Definition
 ---------                           | ----------
-`UINT MaxTraceRecursionDepth` | Limit on ray recursion for the raytracing pipeline. See [Ray recursion limit](../Raytracing.md#ray-recursion-limit).
+`UINT MaxTraceRecursionDepth` | Limit on ray recursion for the raytracing pipeline. See [Ray recursion limit](raytracing-pipelines.md#ray-recursion-limit).
 `D3D12_RAYTRACING_PIPELINE_FLAGS Flags` | See [D3D12_RAYTRACING_PIPELINE_FLAGS](#d3d12_raytracing_pipeline_flags).
 
 <a id="d3d12_raytracing_pipeline_flags"></a>
@@ -935,7 +935,7 @@ The complete skip/opacity flag meanings, valid combinations and traversal effect
 ### Configuration bounds
 
 Raytracing pipeline state objects must [declare](#d3d12_raytracing_pipeline_config) a maximum ray recursion
-depth (in the range [\[0..31\]](../Raytracing.md#constants)).
+depth (in the range [\[0..31\]](raytracing-pipelines.md#constants)).
 
 ```cpp
 const UINT D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES = 32;
@@ -995,7 +995,7 @@ ProceduralPrimitiveHitGroup my_procedural_group_name =
 
 A named root signature that can be used globally in a raytracing pipeline
 or associated with shaders by name. The root signature is global for all
-shaders in a [DispatchRays](../Raytracing.md#dispatchrays) call.
+shaders in a [DispatchRays](raytracing-pipelines.md#id3d12graphicscommandlist4dispatchrays) call.
 
 ```cpp
 GlobalRootSignature my_rs_name =
@@ -1040,7 +1040,7 @@ SubobjectToEntrypointAssociation my_association_name =
 
 ### Raytracing shader config
 
-Defines the maximum sizes in bytes for the [ray payload](../Raytracing.md#ray-payload-structure) and [intersection attributes](../Raytracing.md#intersection-attributes-structure).
+Defines the maximum sizes in bytes for the [ray payload](raytracing-pipelines.md#ray-payload-structure) and [intersection attributes](raytracing-pipelines.md#intersection-attributes-structure).
 See the API equivalent: [D3D12_RAYTRACING_SHADER_CONFIG](#d3d12_raytracing_shader_config).
 
 ```cpp
@@ -1055,7 +1055,7 @@ RaytracingShaderConfig shader_config_name =
 
 ### Raytracing pipeline config
 
-Defines the maximum [TraceRay()](../Raytracing.md#traceray) recursion depth. See the API
+Defines the maximum [TraceRay()](raytracing-pipelines.md#traceray) recursion depth. See the API
 equivalent: [D3D12_RAYTRACING_PIPELINE_CONFIG](#d3d12_raytracing_pipeline_config).
 
 ```cpp
@@ -1069,7 +1069,7 @@ RaytracingPipelineConfig config_name =
 
 ### Raytracing pipeline config1
 
-Defines the maximum [TraceRay()](../Raytracing.md#traceray) recursion depth as well as raytracing pipeline flags. See the API
+Defines the maximum [TraceRay()](raytracing-pipelines.md#traceray) recursion depth as well as raytracing pipeline flags. See the API
 equivalent: [D3D12_RAYTRACING_PIPELINE_CONFIG1](#d3d12_raytracing_pipeline_config1).
 
 ```cpp
@@ -1088,27 +1088,27 @@ This subobject is only available on devices with [Tier 1.1](../Raytracing.md#d3d
 
 ## Work-graph construction
 
-A work graph is a named program in an executable state object. Its nodes reference exported node shaders. The graph description determines entrypoints, explicit overrides and deterministic automatic node population. Shader scheduling, node input/output record operations and `DispatchGraph` execution are defined in the [work-graph execution specification](../WorkGraphs.md#system-design); the construction definitions here select and validate the program consumed by those operations.
+A work graph is a named program in an executable state object. Its nodes reference exported node shaders. The graph description determines entrypoints, explicit overrides and deterministic automatic node population. Shader scheduling, node input/output record operations and `DispatchGraph` execution are defined in the [work-graph execution specification](work-graphs.md#nodes-and-invocation); the construction definitions here select and validate the program consumed by those operations.
 
 <a id="node-id"></a>
 
 ### Node identity
 
-A Node ID is in the form: `{string name, array index}`.  The array index part means all nodes are technically in a [node array](../WorkGraphs.md#node-arrays), where the name of the array is the string name portion of the Node ID. Standalone nodes that have a unique string name just happen to be in an array of size 1.
+A Node ID is in the form: `{string name, array index}`.  The array index part means all nodes are technically in a [node array](work-graphs.md#node-array-constraints), where the name of the array is the string name portion of the Node ID. Standalone nodes that have a unique string name just happen to be in an array of size 1.
 
-In terms of HLSL [shader function attributes](../WorkGraphs.md#shader-function-attributes), a node ID can be explicitly defined via `[NodeID("name",arrayIndex)]`, or just `[NodeID("name")]`, which implies array index 0.
+In terms of HLSL [shader function attributes](work-graphs.md#shader-function-attributes), a node ID can be explicitly defined via `[NodeID("name",arrayIndex)]`, or just `[NodeID("name")]`, which implies array index 0.
 
 In the absence of these attributes for explicitly indicating node IDs, node ID defaults to whatever name is in context (with array index 0) for convenience.
 
-For instance if a [node shader definition](../WorkGraphs.md#shader-function-attributes) doesn't specify a `[NodeID()]` attribute, the node ID defaults to `{shader name in HLSL, 0}` in the compiled shader. The NodeID and shader name are separate entities in the shader.  From the runtime point of view, it doesn't know whether the NodeID was specified explicitly or was a default assignment.  The significance is if the shader export is renamed when importing into a state object, the NodeID doesn't also get renamed. To rename NodeIDs at state object creation, use node overrides such as [D3D12_COMMON_COMPUTE_NODE_OVERRIDES](#d3d12_common_compute_node_overrides) at the API.
+For instance if a [node shader definition](work-graphs.md#shader-function-attributes) doesn't specify a `[NodeID()]` attribute, the node ID defaults to `{shader name in HLSL, 0}` in the compiled shader. The NodeID and shader name are separate entities in the shader.  From the runtime point of view, it doesn't know whether the NodeID was specified explicitly or was a default assignment.  The significance is if the shader export is renamed when importing into a state object, the NodeID doesn't also get renamed. To rename NodeIDs at state object creation, use node overrides such as [D3D12_COMMON_COMPUTE_NODE_OVERRIDES](#d3d12_common_compute_node_overrides) at the API.
 
-If a [node output declaration](../WorkGraphs.md#node-output-declaration) doesn't specify a `[NodeID()]` attribute the node ID defaults to `{localVariableName for the output node, 0}`.
+If a [node output declaration](work-graphs.md#node-output-declaration) doesn't specify a `[NodeID()]` attribute the node ID defaults to `{localVariableName for the output node, 0}`.
 
 Given a variable declared in a shader that represents an array of output nodes, say `myOutputArray` having a  Node ID `{name,arrayIndex}`, the `arrayIndex` part of the ID serves as the *base* for array indexing.  So the shader body can index the node array via `myOutputArray[i]`, which resolves to Node ID `{name,arrayIndex+i}`.
 
 Some APIs refer to NodeIDs as well (such as methods for overriding the IDs specified in shaders): see [D3D12_NODE_ID](#d3d12_node_id).
 
-Various constraints on the construction of node arrays are described in [Node array constraints](#node-array-constraints).
+Various constraints on the construction of node arrays are described in [Node array constraints](work-graphs.md#node-array-constraints).
 
 <a id="local-root-table-indices"></a>
 
@@ -1162,7 +1162,7 @@ NumExplicitlyDefinedNodes | Size of the `pExplicitlyDefinedNodes` array.  If 0, 
 
 The `pExplicitlyDefinedNodes`, `pEntrypoints` and the `D3D12_WORK_GRAPH_FLAG_INCLUDE_ALL_AVAILABLE_NODES` option in the `Flags` field provide three ways to specify the nodes in a graph.  Each can be used individually or any combination.  In terms of order of operations, the system populates the work graph first with any nodes in `pExplicitlyDefinedNodes`, then via `pEntrypoints`, and then via the flag `D3D12_WORK_GRAPH_FLAG_INCLUDE_ALL_AVAILABLE_NODES`.
 
-Any node IDs listed in `pEntrypoints` are obviously treated as program entrypoints, even if the shader doesn't specify it in the [shader function attributes](../WorkGraphs.md#shader-function-attributes).  Additional nodes in the graph definition are auto-populated - automatically inferred by the runtime, traversing the declared node outputs starting at the entrypoints, recursively adding referenced child nodes in a depth first manner, traversing outputs for a given node in the order declared in the shader.  It is an error if an expected child node isn't present in the state object, unless the output being traversed is an array output from the parent node.  Array node outputs are allowed to not be fully populated in the graph.
+Any node IDs listed in `pEntrypoints` are obviously treated as program entrypoints, even if the shader doesn't specify it in the [shader function attributes](work-graphs.md#shader-function-attributes).  Additional nodes in the graph definition are auto-populated - automatically inferred by the runtime, traversing the declared node outputs starting at the entrypoints, recursively adding referenced child nodes in a depth first manner, traversing outputs for a given node in the order declared in the shader.  It is an error if an expected child node isn't present in the state object, unless the output being traversed is an array output from the parent node.  Array node outputs are allowed to not be fully populated in the graph.
 
 The `D3D12_WORK_GRAPH_FLAG_INCLUDE_ALL_AVAILABLE_NODES` flag does similar graph auto-population, taking each node shader exported from DXIL libraries in the order they were exported, adding them to the graph and recursively adding their children (if not already in the graph).  Nodes added because of this flag that end up with no other node writing to them are taken to be graph entrypoints.
 
@@ -1258,7 +1258,7 @@ typedef struct D3D12_SHADER_NODE
 
 Member                           | Definition
 ---------                        | ----------
-`Shader` | Which exported shader to use for this node.  The specified shader must specify [shader target](../WorkGraphs.md#shader-target) `[Shader("node")]`.  If the shader doesn't explicitly specify a Node ID, the ID for the node is {shader name in HLSL, array index 0}, unless the ID is overridden in the applicable `*_OVERRIDES` struct here.
+`Shader` | Which exported shader to use for this node.  The specified shader must specify [shader target](work-graphs.md#shader-target) `[Shader("node")]`.  If the shader doesn't explicitly specify a Node ID, the ID for the node is {shader name in HLSL, array index 0}, unless the ID is overridden in the applicable `*_OVERRIDES` struct here.
 `OverridesType` | See [D3D12_NODE_OVERRIDES_TYPE](#d3d12_node_overrides_type).  Can be set to `D3D12_NODE_OVERRIDES_TYPE_NONE` if nothing is being overridden.  Otherwise, it must be set to either a value that matches the launch mode declared for the shader or `D3D12_NODE_OVERRIDES_TYPE_COMMON_COMPUTE`, and then the corresponding entry in the union is referenced.  The launch mode of a shader can't be changed. `D3D12_NODE_OVERRIDES_TYPE_COMMON_COMPUTE` is handy for doing overrides that aren't unique to a given launch mode, so the specific launch mode doesn't have to be known.
 `pBroadcastingLaunchOverrides` | Used when `OverridesType` is `D3D12_NODE_OVERRIDES_TYPE_BROADCASTING_LAUNCH`. See [D3D12_BROADCASTING_LAUNCH_OVERRIDES](#d3d12_broadcasting_launch_overrides).
 `pCoalescingLaunchOverrides` | Used when `OverridesType` is `D3D12_NODE_OVERRIDES_TYPE_COALESCING_LAUNCH`. See [D3D12_COALESCING_LAUNCH_OVERRIDES](#d3d12_coalescing_launch_overrides).
@@ -1294,7 +1294,7 @@ Value                           | Definition
 
 ### D3D12_BROADCASTING_LAUNCH_OVERRIDES
 
-Override shader attributes.  See [shader function attributes](../WorkGraphs.md#shader-function-attributes) and [node output declaration](../WorkGraphs.md#node-output-declaration) for the attributes that can be overridden.
+Override shader attributes.  See [shader function attributes](work-graphs.md#shader-function-attributes) and [node output declaration](work-graphs.md#node-output-declaration) for the attributes that can be overridden.
 
 ```cpp
 typedef struct D3D12_BROADCASTING_LAUNCH_OVERRIDES
@@ -1312,12 +1312,12 @@ typedef struct D3D12_BROADCASTING_LAUNCH_OVERRIDES
 
 Member                           | Definition
 ---------                        | ----------
-`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
-`pProgramEntry` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
-`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
-`pShareInputOf` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
-`pDispatchGrid` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeDispatchGrid()]` (or lack of it). Set to `nullptr` if not overriding the shader definition or not applicable (e.g. dispatch grid is in shader record), in which case `[NodeMaxDispatchGrid()]` / `pMaxDispatchGrid` are relevant instead). The [work-graph grid configuration](compute.md#work-graph-grids) and [shared grid limits](compute.md#shared-grid-limits) govern these overrides, including expanded one-dimensional X values.
-`pMaxDispatchGrid` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeMaxDispatchGrid()]` (or lack of it). Set to `nullptr` if not overriding the shader definition or not applicable (e.g. fixed dispatch grid, in which case `[NodeDispatchGrid()]` / `pDispatchGrid` are relevant instead). The [work-graph grid configuration](compute.md#work-graph-grids) and [shared grid limits](compute.md#shared-grid-limits) govern these overrides, including expanded one-dimensional X values.
+`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
+`pProgramEntry` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
+`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
+`pShareInputOf` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
+`pDispatchGrid` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeDispatchGrid()]` (or lack of it). Set to `nullptr` if not overriding the shader definition or not applicable (e.g. dispatch grid is in shader record), in which case `[NodeMaxDispatchGrid()]` / `pMaxDispatchGrid` are relevant instead). The [work-graph grid configuration](compute.md#work-graph-grids) and [shared grid limits](compute.md#shared-grid-limits) govern these overrides, including expanded one-dimensional X values.
+`pMaxDispatchGrid` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeMaxDispatchGrid()]` (or lack of it). Set to `nullptr` if not overriding the shader definition or not applicable (e.g. fixed dispatch grid, in which case `[NodeDispatchGrid()]` / `pDispatchGrid` are relevant instead). The [work-graph grid configuration](compute.md#work-graph-grids) and [shared grid limits](compute.md#shared-grid-limits) govern these overrides, including expanded one-dimensional X values.
 `NumOutputOverrides` | Size of array pointed to by `pOutputOverrides`.  Any number of the shader's declared output nodes can have output attributes overridden.  Set to 0 if not overriding any outputs (`pOutputOverrides` will be ignored).
 `pOutputOverrides` | If `NumOutputOverrides > 0`, points to an array of `NumOutputOverrides` [D3D12_NODE_OUTPUT_OVERRIDES](#d3d12_node_output_overrides) definitions.
 
@@ -1327,7 +1327,7 @@ Shader-authored `NodeDispatchGrid` and `NodeMaxDispatchGrid` attributes retain t
 
 ### D3D12_COALESCING_LAUNCH_OVERRIDES
 
-Override shader attributes.  See [shader function attributes](../WorkGraphs.md#shader-function-attributes) and [node output declaration](../WorkGraphs.md#node-output-declaration) for the attributes that can be overridden.
+Override shader attributes.  See [shader function attributes](work-graphs.md#shader-function-attributes) and [node output declaration](work-graphs.md#node-output-declaration) for the attributes that can be overridden.
 
 ```cpp
 typedef struct D3D12_COALESCING_LAUNCH_OVERRIDES
@@ -1343,10 +1343,10 @@ typedef struct D3D12_COALESCING_LAUNCH_OVERRIDES
 
 Member                           | Definition
 ---------                        | ----------
-`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
-`pProgramEntry` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
-`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
-`pShareInputOf` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
+`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
+`pProgramEntry` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
+`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
+`pShareInputOf` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
 `NumOutputOverrides` | Size of array pointed to by `pOutputOverrides`.  Any number of the shader's declared output nodes can have output attributes overridden.  Set to 0 if not overriding any outputs (`pOutputOverrides` will be ignored).
 `pOutputOverrides` | If `NumOutputOverrides > 0`, points to an array of `NumOutputOverrides` [D3D12_NODE_OUTPUT_OVERRIDES](#d3d12_node_output_overrides) definitions.
 
@@ -1354,7 +1354,7 @@ Member                           | Definition
 
 ### D3D12_THREAD_LAUNCH_OVERRIDES
 
-Override shader attributes.  See [shader function attributes](../WorkGraphs.md#shader-function-attributes) and [node output declaration](../WorkGraphs.md#node-output-declaration) for the attributes that can be overridden.
+Override shader attributes.  See [shader function attributes](work-graphs.md#shader-function-attributes) and [node output declaration](work-graphs.md#node-output-declaration) for the attributes that can be overridden.
 
 ```cpp
 typedef struct D3D12_THREAD_LAUNCH_OVERRIDES
@@ -1370,10 +1370,10 @@ typedef struct D3D12_THREAD_LAUNCH_OVERRIDES
 
 Member                           | Definition
 ---------                        | ----------
-`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
-`pProgramEntry` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
-`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
-`pShareInputOf` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
+`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
+`pProgramEntry` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
+`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
+`pShareInputOf` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
 `NumOutputOverrides` | Size of array pointed to by `pOutputOverrides`.  Any number of the shader's declared output nodes can have output attributes overridden.  Set to 0 if not overriding any outputs (`pOutputOverrides` will be ignored).
 `pOutputOverrides` | If `NumOutputOverrides > 0`, points to an array of `NumOutputOverrides` [D3D12_NODE_OUTPUT_OVERRIDES](#d3d12_node_output_overrides) definitions.
 
@@ -1381,7 +1381,7 @@ Member                           | Definition
 
 ### D3D12_COMMON_COMPUTE_NODE_OVERRIDES
 
-Override shader attributes.  See [shader function attributes](../WorkGraphs.md#shader-function-attributes) and [node output declaration](../WorkGraphs.md#node-output-declaration) for the attributes that can be overridden.
+Override shader attributes.  See [shader function attributes](work-graphs.md#shader-function-attributes) and [node output declaration](work-graphs.md#node-output-declaration) for the attributes that can be overridden.
 
 This option is a convenience for overriding properties that are common across all compute launch modes: thread launch, coalescing launch and broadcasting launch.
 
@@ -1399,10 +1399,10 @@ typedef struct D3D12_COMMON_COMPUTE_NODE_OVERRIDES
 
 Member                           | Definition
 ---------                        | ----------
-`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
-`pProgramEntry` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
-`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
-`pShareInputOf` | Overrides [shader function attribute](../WorkGraphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
+`pLocalRootArgumentsTableIndex` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeLocalRootArgumentsTableIndex()]` (or default table index discussed at the link if the attribute wasn't specified). `-1` means auto-assign (if the node has a local root signature associated with it) - equivalent to not declaring.  Set to `nullptr` if not overriding the shader definition / default.
+`pProgramEntry` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeIsProgramEntry]` (or lack of it).  Invalid to set this to false if no other nodes output to this node.  Set to `nullptr` if not overriding the shader definition / default.
+`pNewName` | Assign a new name for the node instead of what the shader defined via [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeID()]`, or in the absence of that attribute the default node ID {shader name in HLSL, array index 0}.  If not overriding the existing NodeID, specify `nullptr` for `pNewName`.
+`pShareInputOf` | Overrides [shader function attribute](work-graphs.md#shader-function-attributes) `[NodeShareInputOf()]` (or lack of it).  Set to `nullptr` if not overriding the shader definition / default.  Specify `nullptr` for `pShareInputOf->Name` to force not sharing input.  The NodeID specified here applies after any node renames.
 `NumOutputOverrides` | Size of array pointed to by `pOutputOverrides`.  Any number of the shader's declared output nodes can have output attributes overridden.  Set to 0 if not overriding any outputs (`pOutputOverrides` will be ignored).
 `pOutputOverrides` | If `NumOutputOverrides > 0`, points to an array of `NumOutputOverrides` [D3D12_NODE_OUTPUT_OVERRIDES](#d3d12_node_output_overrides) definitions.
 
@@ -1424,118 +1424,16 @@ typedef struct D3D12_NODE_OUTPUT_OVERRIDES
 Member                           | Definition
 ---------                        | ----------
 `OutputIndex` | Which output is being overridden.  This is a `0` based index based on the order output declarations appear in the shader.  Output arrays count as one output declaration - so referencing one of them here overrides the behavior of the output array as a whole.
-`pNewName` | New NodeID to override the one defined in the shader, either: [node output attribute](../WorkGraphs.md#node-output-attributes) `[NodeID()]`, or if that attribute is not present, the default NodeID for the output: {HLSL variable name, array index 0}.  If `OutputIndex` refers to an output array, this is the new NodeID for that start of the array.  Set to `nullptr` if not overriding the name in the shader.
-`pAllowSparseNodes` | Overrides [node output attribute](../WorkGraphs.md#node-output-attributes) `[AllowSparseNodes]` (or lack of it) in the shader.  If not specified here or in shader, defaults to `FALSE`, except `TRUE` if the shader uses `[UnboundedSparseNodes]`.  Can't be `FALSE` if the shader uses `[UnboundedSparseNodes]`. Set to `nullptr` if not overriding the shader.
-`pMaxRecords` | Overrides [node output attribute](../WorkGraphs.md#node-output-attributes) `[MaxRecords()]` or `[MaxRecordsSharedWith()]`, whichever one is present in the shader.  In the case of the shader declaring `[MaxRecordsSharedWith()]`, using `pMaxRecords` to override makes the output budget no longer shared. At most one of `pMaxRecords` or `pMaxRecordsSharedWithOutputIndex` can be set.  Set to `nullptr` if not overriding the shader.
-`pMaxRecordsSharedWithOutputIndex` | Overrides [node output attribute](../WorkGraphs.md#node-output-attributes) `[MaxRecordsSharedWith()]` or `[MaxRecords()]`, whichever one is present in the shader.  In the case of the shader declaring `[MaxRecords()]`, using `pMaxRecordsSharedWithOutputIndex` to override makes the output budget now shared. At most one of `pMaxRecords` or `pMaxRecordsSharedWithOutputIndex` can be set.  Set to `nullptr` if not overriding the shader.  If overriding, the index value identifies which shader output to share with, a 0-based index into the outputs in the order declared in the shader.
+`pNewName` | New NodeID to override the one defined in the shader, either: [node output attribute](work-graphs.md#node-output-attributes) `[NodeID()]`, or if that attribute is not present, the default NodeID for the output: {HLSL variable name, array index 0}.  If `OutputIndex` refers to an output array, this is the new NodeID for that start of the array.  Set to `nullptr` if not overriding the name in the shader.
+`pAllowSparseNodes` | Overrides [node output attribute](work-graphs.md#node-output-attributes) `[AllowSparseNodes]` (or lack of it) in the shader.  If not specified here or in shader, defaults to `FALSE`, except `TRUE` if the shader uses `[UnboundedSparseNodes]`.  Can't be `FALSE` if the shader uses `[UnboundedSparseNodes]`. Set to `nullptr` if not overriding the shader.
+`pMaxRecords` | Overrides [node output attribute](work-graphs.md#node-output-attributes) `[MaxRecords()]` or `[MaxRecordsSharedWith()]`, whichever one is present in the shader.  In the case of the shader declaring `[MaxRecordsSharedWith()]`, using `pMaxRecords` to override makes the output budget no longer shared. At most one of `pMaxRecords` or `pMaxRecordsSharedWithOutputIndex` can be set.  Set to `nullptr` if not overriding the shader.
+`pMaxRecordsSharedWithOutputIndex` | Overrides [node output attribute](work-graphs.md#node-output-attributes) `[MaxRecordsSharedWith()]` or `[MaxRecords()]`, whichever one is present in the shader.  In the case of the shader declaring `[MaxRecords()]`, using `pMaxRecordsSharedWithOutputIndex` to override makes the output budget now shared. At most one of `pMaxRecords` or `pMaxRecordsSharedWithOutputIndex` can be set.  Set to `nullptr` if not overriding the shader.  If overriding, the index value identifies which shader output to share with, a 0-based index into the outputs in the order declared in the shader.
 
 <a id="graph-validation"></a>
 
 ### Graph structural validation
 
----
-
-#### Node count limits
-
-The number of nodes in a graph is limited only to simplify the system's tracking of nodes.  From the programming model, nodes have [Node IDs](#node-id), which have two components: name and array index.  The limit is defined such that implementations can map each node IDs in a graph into a `24` bit value.  Thus there can be at most `0xffffff` nodes in a graph.
-
-Furthermore, the array index value that a Node's ID uses counts against this limit.  It is valid to have sparsely populated arrays of nodes, and so gaps count against the limit.  Finally, for any node that is recursive, it's [NodeMaxRecursionDepth()](../WorkGraphs.md#shader-function-attributes) also counts against the limit, as implementations may internally unroll recursive node.
-
-Putting that all together, the limit on nodes in the graph is enforced with the following calculation:
-
-- For all nodes that share a given Node ID string name, determine the highest array index value used with that string name: `MaxArrayIndexPerNodeStringName`.  Since the array index means `0` based counting, the number of slots used is: `NumSlotsPerNodeStringName = MaxArrayIndexPerNodeStringName + 1`.
-- Tally the sum of `NumSlotsPerNodeStringName` for each unique string name: `NumSlotsForAllNodeStringNames`
-- For any node that declares `[NodeMaxRecursionDepth()]`, tally the sum of all these declarations as `NumSlotsForRecursiveNodes`
-- `NumSlotsForAllNodeStringNames + NumSlotsForRecursiveNodes <= 0xffffff`
-
-> Regardless of this arbitrarily high limit, the more nodes that are active, the more the scheduler has to track, obviously.  It is possible that a scheduler implementation does not have to degrade its performance significantly as node count grows.  That is an aspiration though, and in practice there may be hardware dependent performance drops as node counts grow.
-
-> One possibility is implementations could tolerate a graph with a massive number of nodes just fine, as long as many of the nodes are at the same depth in the graph. In support of this, there is a hard constraint on graph depth as a way to limit implementation complexity.
-
-The longest chain of nodes cannot exceed `32` (`#define D3D12_WORK_GRAPHS_MAX_NODE_DEPTH 32`).  Nodes that target themselves recursively count against this limit by their maximum declared recursion level.
-
----
-
-#### Node output limits
-
-There is a limit on output record storage that is a function of the following variables:
-
-`MaxRecords` = Maximum output record count declared across all outputs for a thread group summed together.  These are declared on outputs via `[MaxRecords()]` [node output attributes](../WorkGraphs.md#node-output-attributes) or [D3D12_NODE_OUTPUT_OVERRIDES](#d3d12_node_output_overrides).
-
-`MaxOutputSize` = Space required by the `MaxRecords` records in total
-
-`SharedMemorySize` = Space required by thread group shared memory declared by a thread group
-
-`MaxRecords_WithTrackRWInputSharing` =
-                    Maximum output record count, Like `MaxRecords` above, except only
-                    counting outputs that specify the
-                    `[`[NodeTrackRWInputSharing](../WorkGraphs.md#nodetrackrwinputsharing)`]` attribute on the
-                    [record struct](../WorkGraphs.md#record-struct).
-
-Requirements:
-
-```none
-All launch modes:
-
-    SharedMemorySize <= 32 KB
-
-Broadcasting and Coalescing launch nodes:
-
-    MaxRecords <= 256
-
-    MaxOutputSize <= (32 KB - 4*MaxRecords_WithTrackRWInputSharing)
-
-    (MaxOutputSize +
-     SharedMemorySize +
-     8*MaxRecords
-    ) <= 48KB
-
-Thread launch node:
-
-    MaxRecords <= 8
-
-    MaxOutputSize <= 128 bytes
-```
-
-Notes:
-
-If multiple (N) nodes [share input records](../WorkGraphs.md#sharing-input-records-across-nodes) that are output by a given node, the cost of those records is multiplied by N against the limits involving `MaxRecords` and `MaxOutputSize` above.  This is to be forgiving of the simplest of implementations that need to internally duplicate records that are shared.  If the node is outputting to an array, the cost multiplier is the max N value for the nodes present in the array.
-
-For `MaxRecords`, an exception to the limits are empty records ([EmptyNodeOutput](../WorkGraphs.md#node-output-declaration)), which don't count against the limit.  That said, outputs that are [EmptyNodeOutput](../WorkGraphs.md#node-output-declaration) still need to have [MaxRecords or MaxRecordsSharedWith](../WorkGraphs.md#node-output-attributes) declared to help scheduler implementations reason about work expansion potential and also avoid overflowing tracking of live work.
-
-> The constraint on 'SharedMemorySize' is simply consistent with the longstanding limit on compute shaders.
-
-> The last constraint for broadcasting and coalescing launch nodes, combining all the variables, simply allows for implementations that choose to allocate all of these from a limited memory space.  Some implementations will not care about some of the terms in this constraint because they have different tools to work with in the hardware.
-
-> These bounds on the memory footprint of node shaders are present to simplify implementations and make them at least less likely to hit performance cliffs and very large overall graph execution memory backing footprints.  The exact numbers are at least somewhat arbitrary, so some implementations may yield more efficiency when apps don't need to max out the limits.
-
-> One might notice that the tight limits on thread launch nodes could be worked around by simply renaming the node to be coalescing launch or broadcasting launch nodes with a thread group size of 1.  While this is true, implementations of the different node types will typically be fundamentally different.  For instance with coalescing and broadcasting launch nodes, implementations cannot appear to pack thread groups into a wave by definition (see [Thread visibility in wave operations](../WorkGraphs.md#thread-visibility-in-wave-operations)), so it might be that using thread groups of size 1 in those node types will expose inefficiency similar to using compute shaders in general this way.  On the other hand, if thread launch output limits turn out be too restrictive, working around them by switching node types (and possibly using larger thread group sizes) might produce inefficiency locally in a graph that is worth taking on for the benefit of overall graph data flow.  This is hard to predict, and apps are certainly free to experiment to see what works best.
-
-Another limit on outputs is the maximum number of node output declarations from a node is 1024.  This refers to output targets, not number of records.  Fortunately outputting to a node array only counts as 1 to this limit (regardless of array size).  So it is exceedingly unlikely for an application to reach the limit - imagine a single shader that declares more than 1024 separate individual outputs (that many lines of HLSL code just in the shader function signature), and has dedicated separate code in the shader body to write to each of the outputs.
-
----
-
-#### Node input limits
-
-If the inputs to a node all come from other nodes in the graph, the output limits on them imply a limit on the input size - a maximum of 32KB per record.  Inputs to a node from outside the graph, i.e. from [DispatchGraph()](../WorkGraphs.md#dispatchgraph) have no size limit.
-
-For a [coalescing launch node](../WorkGraphs.md#coalescing-launch-nodes), a shader could declare that it supports a very large maximum number of input records.  This might seem to imply an unbounded amount of input storage.  However, some implementations may simply never fill the requested quota; they are allowed to launch with fewer than the maximum number of inputs.
-
----
-
-#### Node array constraints
-
-Nodes that are in an array (in the case of an array of size greater than 1) have the same string name for their [NodeID](../WorkGraphs.md#shader-function-attributes), but use the array index part of the NodeID to place themselves in an array.  The default array index if not specified is `[0]` - all nodes are in an array of size 1 at minimum.
-
-Node arrays don't have to be contiguously populated.  Whatever NodeIDs are present in a graph with the same string name but different array indices defines the populated part of an array.
-
-Constraints on nodes in the same array:
-
-- Input record type must be the same - see [Node input declaration](../WorkGraphs.md#node-input-declaration).
-- Input record access mode must be the same - see `RW` vs read-only vs `EmptyNodeInput` in [Node input declaration](../WorkGraphs.md#node-input-declaration)
-- If any node in an array has a static dispatch grid size (e.g. declares `[NodeDispatchGrid()]`), all nodes must do so.
-- The launch mode for all nodes in an array must match.
-- For the purpose of enforcing the maximum allowed graph depth limit described in [Node count limits](#node-count-limits), the depth of any given entry in a node array is defined to be equal to the maximum depth any other part of the same node array appears at in the graph.  This can apply if it looks like different parts of a graph are targetting different regions of one array from different depths - the whole array counts as being at the highest depth.  A byproduct of this is that a node in an array cannot target another node in the same array (else the max-depth rule would go to infinity).  Self-recursion of a node in an array is fine, and the increase in depth for self recursion of a node doesn't increase the depth of other nodes in the same array.
+Graph construction validates the complete [node count and depth](work-graphs.md#node-count-limits), [output-record and shared-storage budgets](work-graphs.md#node-output-limits), [input-record limits](work-graphs.md#node-input-limits) and [node-array constraints](work-graphs.md#node-array-constraints) after applying node overrides. These record-dependent algorithms are defined in [Work-graph execution](work-graphs.md#graph-validation), following the launch, record and input-sharing definitions.
 
 <a id="generic-programs"></a>
 
@@ -1805,11 +1703,11 @@ Since `AddToStateObject` returns a new state object, this enables the applicatio
 
 [State object lifetimes as seen by driver](#driver-lifetime) is a discussion useful for driver authors.
 
-The runtime uses a shared mutex across all state objects within a family to enforce thread safety: The `AddToStateObject` API takes a writer lock on state objects within a family.  And APIs that retrieve shader export based information, [GetShaderIdentifier()](#getshaderidentifier) and [GetShaderStackSize()](../Raytracing.md#getshaderstacksize), take a shared reader lock on state objects in a family.
+The runtime uses a shared mutex across all state objects within a family to enforce thread safety: The `AddToStateObject` API takes a writer lock on state objects within a family.  And APIs that retrieve shader export based information, [GetShaderIdentifier()](#getshaderidentifier) and [GetShaderStackSize()](raytracing-pipelines.md#id3d12stateobjectpropertiesgetshaderstacksize), take a shared reader lock on state objects in a family.
 
 > A straightforward way to minimize any thread contention is to retrieve any needed shader identifiers etc. from a state object right after it is created (and remembering that any other state objects created from this one share identifiers so they need not be re-retrieved).  So that by the time `AddToStateObject` needs to be called, nothing will be at risk of blocking (unless `AddToStateObject` itself is called in parallel with related state objects for some reason).
 
-The new state object starts off with the same [pipeline stack size](../Raytracing.md#pipeline-stack) setting as the previous. (The runtime doesn't try to enforce thread safety against the app calling [SetPipelineStackSize()](../Raytracing.md#setpipelinestacksize) to change stack size on the existing state object while it is being used in an `AddToStateObject()` call.)  After `AddToStateObject()` returns a new state object, the app can call [GetShaderStackSize()](../Raytracing.md#getshaderstacksize) on newly added shaders to decide if the pipeline stack size for the new state object needs to be updated via [SetPipelineStackSize()](../Raytracing.md#setpipelinestacksize).
+The new state object starts off with the same [pipeline stack size](raytracing-pipelines.md#pipeline-stack) setting as the previous. (The runtime doesn't try to enforce thread safety against the app calling [SetPipelineStackSize()](raytracing-pipelines.md#id3d12stateobjectpropertiessetpipelinestacksize) to change stack size on the existing state object while it is being used in an `AddToStateObject()` call.)  After `AddToStateObject()` returns a new state object, the app can call [GetShaderStackSize()](raytracing-pipelines.md#id3d12stateobjectpropertiesgetshaderstacksize) on newly added shaders to decide if the pipeline stack size for the new state object needs to be updated via [SetPipelineStackSize()](raytracing-pipelines.md#id3d12stateobjectpropertiessetpipelinestacksize).
 
 There are some stipulations about how the additions to a state object must relate to what exists already in the state object (validated by the runtime):
 
@@ -1819,7 +1717,7 @@ There are some stipulations about how the additions to a state object must relat
 
 - The original state object and the portion being added must both opt-in to being used with AddToStateObject().  This is accomplished by specifying the flag `D3D12_STATE_OBJECT_FLAG_ALLOW_STATE_OBJECT_ADDITIONS` as part of the [flags](#d3d12_state_object_flags) member of [D3D12_STATE_OBJECT_CONFIG](#d3d12_state_object_config).  See [flags](#d3d12_state_object_flags) for more detail such as what `D3D12_STATE_OBJECT_FLAG_ALLOW_STATE_OBJECT_ADDITIONS` means for collection state objects.
 
-- Any exported shader entrypoints (i.e. that support [shader identifiers](../Raytracing.md#shader-identifier)) must have unique names that do not conflict with exports from the existing state object.
+- Any exported shader entrypoints (i.e. that support [shader identifiers](raytracing-pipelines.md#shader-identifier)) must have unique names that do not conflict with exports from the existing state object.
 
 - Non shader entrypoints, such as library functions, are allowed to be defined over again (reusing a name with same or different code definition) relative to what already in the state object - necessary if they need to be visible locally.  The same is true for any of the various [subobjects](#object-model) that are defined.
 
@@ -1858,7 +1756,7 @@ First, here are a few general/overall properties for additions to state objects 
 Valid additions to state objects of type `D3D12_STATE_OBJECT_TYPE_EXECUTABLE`:
 
 - New shaders, generic [programs](#program), work graphs, subobjects like root signatures that shaders may need or building blocks of generic programs like blend state.
-- New nodes of any [node type](../WorkGraphs.md#node-types) added to a new or existing work graph in the state object
+- New nodes of any [node type](work-graphs.md#nodes-and-invocation) added to a new or existing work graph in the state object
 - New generic programs and nodes in work graphs can reference new and/or existing shaders and subobjects
   - If a generic program defined in an addition needs to reference a subobject, the subobject must be specified locally in the addition. Shader entrypoints from earlier versions of the state object can be used in new nodes (referenced by export name).
 
@@ -1866,8 +1764,8 @@ Work graph specific rules:
 
 - Adding nodes to an existing work graph in a state object is accomplished by passing a new work graph definition to `AddToStateObject`, whose name matches the existing one, with just the new nodes listed in it.  If the program name is unique in the state object, that means an entirely new work graph is being added (perhaps reusing some existing/new shaders), and later additions can be done to that as well.
 - Ways additions can fit onto to an existing graph
-  - Filling holes in output node array ranges of the graph, where `[`[AllowSparseNodes](../WorkGraphs.md#node-output-attributes)`]` or `[UnboundedSparseNodes]` is specified on the output array.
-  - Adding new entrypoint nodes.  The entrypoint index of existing nodes, as reported by [GetEntrypointIndex()](../WorkGraphs.md#getentrypointindex), remain unchanged. New entrypoints will have entrypoint index values that continue past existing entrypoints.
+  - Filling holes in output node array ranges of the graph, where `[`[AllowSparseNodes](work-graphs.md#node-output-attributes)`]` or `[UnboundedSparseNodes]` is specified on the output array.
+  - Adding new entrypoint nodes.  The entrypoint index of existing nodes, as reported by [GetEntrypointIndex()](work-graphs.md#getentrypointindex), remain unchanged. New entrypoints will have entrypoint index values that continue past existing entrypoints.
   - Any of the above additions can be a graph of nodes in itself, like adding a subgraph to the overall graph.
   - New nodes can output to existing nodes in the graph, as long as the graph addition doesn't cause the maximum depth from an entrypoint of any existing node to increase.
   - NodeIDs of new nodes must not exist in any previous version of the graph.
@@ -1901,8 +1799,8 @@ void* GetShaderIdentifier(LPCWSTR pExportName);
 #### Behavior
 
 Retrieve the unique identifier for a shader that can be used in
-[Shader records](../Raytracing.md#shader-record). This is only valid for [Ray generation shaders](../Raytracing.md#ray-generation-shaders),
-[Hit groups](../Raytracing.md#hit-groups), [Miss shaders](../Raytracing.md#miss-shaders) and [Callable shaders](../Raytracing.md#callable-shaders). The state object
+[Shader records](raytracing-pipelines.md#shader-record). This is only valid for [Ray generation shaders](raytracing-pipelines.md#ray-generation-shaders),
+[Hit groups](raytracing-pipelines.md#hit-groups), [Miss shaders](raytracing-pipelines.md#miss-shaders) and [Callable shaders](raytracing-pipelines.md#callable-shaders). The state object
 can be a collection or raytracing pipeline state object, and the shader
 must not have any unresolved references or missing associations
 to required subobjects (in other words be fully compileable by a driver),
@@ -1911,7 +1809,7 @@ otherwise nullptr is returned.
 Parameter                           | Definition
 ---------                           | ----------
 `LPCWSTR pExportName` | Entrypoint in the state object for which to retrieve an identifier.
-`Return value: void*` | <p>Returns a pointer to the shader identifier.</p><p>The pointer and data pointed to are valid as long as the state object it came from is valid. The size of the data returned is [D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES](../Raytracing.md#constants). Applications should retain this result to avoid the cost of searching for it in the state object if it will need to be retrieved many times. The place the identifier actually gets used is in shader records within shader tables in GPU memory, which it is up to the app to populate.</p><p>If the shader isn't fully resolved in the state object, the return value is nullptr.</p>
+`Return value: void*` | <p>Returns a pointer to the shader identifier.</p><p>The pointer and data pointed to are valid as long as the state object it came from is valid. The size of the data returned is [D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES](raytracing-pipelines.md#constants). Applications should retain this result to avoid the cost of searching for it in the state object if it will need to be retrieved many times. The place the identifier actually gets used is in shader records within shader tables in GPU memory, which it is up to the app to populate.</p><p>If the shader isn't fully resolved in the state object, the return value is nullptr.</p>
 
 `D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES` is 32. The identifier is opaque. Hit-group component shaders are represented by the hit-group identifier rather than separate shader-record entry identifiers.
 
@@ -1950,13 +1848,13 @@ typedef struct D3D12_PROGRAM_IDENTIFIER
 
 ### Raytracing stack properties
 
-Raytracing pipeline stack sizing is defined by [Pipeline stack](../Raytracing.md#pipeline-stack). The complete property contracts for [GetShaderStackSize](../Raytracing.md#getshaderstacksize), [GetPipelineStackSize](../Raytracing.md#getpipelinestacksize) and [SetPipelineStackSize](../Raytracing.md#setpipelinestacksize) are defined there with that model. The [incremental-addition rules](#addtostateobject) above specify stack-setting inheritance and thread-safety interactions with those properties.
+Raytracing pipeline stack sizing is defined by [Pipeline stack](raytracing-pipelines.md#pipeline-stack). The complete property contracts for [GetShaderStackSize](raytracing-pipelines.md#id3d12stateobjectpropertiesgetshaderstacksize), [GetPipelineStackSize](raytracing-pipelines.md#id3d12stateobjectpropertiesgetpipelinestacksize) and [SetPipelineStackSize](raytracing-pipelines.md#id3d12stateobjectpropertiessetpipelinestacksize) are defined there with that model. The [incremental-addition rules](#addtostateobject) above specify stack-setting inheritance and thread-safety interactions with those properties.
 
 <a id="graph-metadata"></a>
 
 ## Work-graph metadata and backing memory
 
-`ID3D12WorkGraphProperties` derives from `IUnknown` and is exposed by the state object. Node/entrypoint enumeration and record-layout reflection are specified in [the work-graph properties reference](../WorkGraphs.md#id3d12workgraphproperties-methods). The name/index, local-root-table index and backing-size methods below provide the construction-to-selection linkage.
+`ID3D12WorkGraphProperties` derives from `IUnknown` and is exposed by the state object. Node/entrypoint enumeration and record-layout reflection are specified in [the work-graph properties reference](work-graphs.md#reflection). The name/index, local-root-table index and backing-size methods below provide the construction-to-selection linkage.
 
 The data returned by `ID3D12WorkGraphProperties` methods are stable given the same state object created at different times or on different devices.  The exception is [GetWorkGraphMemoryRequirements](#getworkgraphmemoryrequirements), which is a query that is fielded by the driver, whose results can therefore vary.
 
@@ -2089,9 +1987,7 @@ Referenced by [GetWorkGraphMemoryRequirements](#getworkgraphmemoryrequirements).
 
 ### Backing memory
 
-The system manages storage for node input records in a backing memory pool allocated by apps.  The amount of memory to allocate is discussed later.  Ideally records stay in on chip caches as much as possible during shader execution, but the backing memory provides a place for the system to spill when needed.  This backing memory is also used to represent any other context state about work graph execution.
-
-The separation of work graph definition from backing memory means an app can use multiple different sets of backing memory with the same work graph.  Each set represents an independent state of work graph execution. This could be necessary, for instance, if an app asks the GPU to run command lists on parallel device queues where each command list happens to use the same work graph.  Each invocation has independent context memory so there are no conflicts.
+[Record backing storage](work-graphs.md#backing-memory) defines the node-input pool and independent graph-execution contexts. Allocation sizing and binding remain defined here.
 
 The [concurrent-queue restrictions on work-graph backing memory](synchronization.md#operation-specific-contracts) are defined by the synchronization contract.
 
@@ -2239,7 +2135,7 @@ Member                           | Definition
 `ProgramIdentifier` | Which work graph to set.  See [D3D12_PROGRAM_IDENTIFIER](#d3d12_program_identifier) and [GetProgramIdentifier](#getprogramidentifier).
 `Flags` | See [D3D12_SET_WORK_GRAPH_FLAGS](#d3d12_set_work_graph_flags).
 `BackingMemory` | See [Backing memory](#backing-memory) and [GetWorkGraphMemoryRequirements()](#getworkgraphmemoryrequirements).  The memory must be accessible as a UAV (`D3D12_BARRIER_ACCESS_COMMON` or `D3D12_BARRIER_ACCESS_UNORDERED_ACCESS`, or with legacy resource state `D3D12_RESOURCE_STATE_COMMON` or `D3D12_RESOURCE_STATE_UNORDERED_ACCESS`).  The address must be `8` byte aligned.  Can be null if the driver reports zero as a valid size.
-`NodeLocalRootArgumentsTable` | Local root argument table location.  See [GetNodeLocalRootArgumentsTableIndex](#getnodelocalrootargumentstableindex) and the `[NodeLocalRootArgumentsTableIndex()]` [shader function attribute](../WorkGraphs.md#shader-function-attributes). `NodeLocalRootArgumentsTable`, if non-null, the memory must be accessible as a shader resource (`D3D12_BARRIER_ACCESS_COMMON` or `D3D12_BARRIER_ACCESS_SHADER_RESOURCE`, or with legacy resource state `D3D12_RESOURCE_STATE_COMMON` or `D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE`).  Nodes that use different local root signatures can't point to the same location in the table, otherwise behavior is undefined.  As such, stride can be `0` only if the work graph uses a single local root signature.  If the stride is nonzero, it must be at least as large as the largest local root signature argument footprint. So there is some unused memory between shader records when they are smaller than the stride.  The address and stride must both be aligned to the size of the largest member of any local root signature in the work graph, e.g. `8` bytes if there are any root descriptors.  Constants only impose 32bit alignment (even if they are vectors).
+`NodeLocalRootArgumentsTable` | Local root argument table location.  See [GetNodeLocalRootArgumentsTableIndex](#getnodelocalrootargumentstableindex) and the `[NodeLocalRootArgumentsTableIndex()]` [shader function attribute](work-graphs.md#shader-function-attributes). `NodeLocalRootArgumentsTable`, if non-null, the memory must be accessible as a shader resource (`D3D12_BARRIER_ACCESS_COMMON` or `D3D12_BARRIER_ACCESS_SHADER_RESOURCE`, or with legacy resource state `D3D12_RESOURCE_STATE_COMMON` or `D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE`).  Nodes that use different local root signatures can't point to the same location in the table, otherwise behavior is undefined.  As such, stride can be `0` only if the work graph uses a single local root signature.  If the stride is nonzero, it must be at least as large as the largest local root signature argument footprint. So there is some unused memory between shader records when they are smaller than the stride.  The address and stride must both be aligned to the size of the largest member of any local root signature in the work graph, e.g. `8` bytes if there are any root descriptors.  Constants only impose 32bit alignment (even if they are vectors).
 
 <a id="d3d12_set_work_graph_flags"></a>
 
@@ -2278,7 +2174,7 @@ Member                           | Definition
 
 Raytracing pipeline state objects require device raytracing support. `D3D12_RAYTRACING_TIER_NOT_SUPPORTED` does not support creating raytracing-related objects; attempting to use raytracing command-list APIs has undefined behavior. Every `AddToStateObject` call requires raytracing tier 1.1, including generic-program and work-graph additions, in addition to the selected workload's own capabilities. `D3D12_RAYTRACING_PIPELINE_CONFIG1` also requires raytracing tier 1.1. Opacity-micromap pipeline support is part of the [opacity-micromap capability contract](../Raytracing.md#d3d12_raytracing_tier).
 
-Work-graph construction requires `D3D12_WORK_GRAPHS_TIER_1_0`, reported by `D3D12_FEATURE_DATA_D3D12_OPTIONS21::WorkGraphsTier`. If work graphs are unsupported, creating work-graph-related objects fails and using work-graph command-list APIs has undefined behavior. Node shaders use [shader target lib_6_8 or higher](../WorkGraphs.md#shader-target).
+Work-graph construction requires `D3D12_WORK_GRAPHS_TIER_1_0`, reported by `D3D12_FEATURE_DATA_D3D12_OPTIONS21::WorkGraphsTier`. If work graphs are unsupported, creating work-graph-related objects fails and using work-graph command-list APIs has undefined behavior. Node shaders use [shader target lib_6_8 or higher](work-graphs.md#shader-target).
 
 Generic programs are available on devices supporting shader model 6.8; the individual non-library shaders use shader-model 6.0 or higher targets. Generic graphics programs retain the [shader-stage and fixed-function compatibility requirements](pipeline-state.md#compatibility) of their selected graphics pipeline. Device methods can be called by multiple threads simultaneously; the addition/property locking and stack-property exceptions above still apply.
 
@@ -2294,12 +2190,12 @@ typedef enum D3D12_WORK_GRAPHS_TIER {
 ```
 
 Level of work graphs support on the device. Queried via
-[CheckFeatureSupport()](../WorkGraphs.md#checkfeaturesupport).
+[CheckFeatureSupport()](state-objects.md#d3d12_work_graphs_tier).
 
 Value                               | Definition
 -----                               | ----------
 `D3D12_WORK_GRAPHS_TIER_NOT_SUPPORTED` | No support for work graphs on the device. Attempts to create any work graphs related object will fail and using work graphs related APIs on command lists results in undefined behavior.
-`D3D12_WORK_GRAPHS_TIER_1_0` | The device supports work graphs tier 1.0.  See [Discovering device support for work graphs](../WorkGraphs.md#discovering-device-support-for-work-graphs).
+`D3D12_WORK_GRAPHS_TIER_1_0` | The device supports work graphs tier 1.0.  See [Discovering device support for work graphs](state-objects.md#availability).
 
 <a id="driver-contracts"></a>
 
@@ -2948,13 +2844,13 @@ typedef struct D3D12DDI_RECORD_DISPATCH_GRID_0108
 } D3D12DDI_RECORD_DISPATCH_GRID_0108;
 ```
 
-This describes the [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid) field in a record, if present.
+This describes the [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid) field in a record, if present.
 
 Member                           | Definition
 ---------                        | ----------
-`ByteOffset`    | Offset of [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid) in record.
-`NumComponents` | Number of components in [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid), `[1...3]`
-`b16BitsPerComponent` | If true, the components in [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid) are `uint16`, else `uint32`.
+`ByteOffset`    | Offset of [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid) in record.
+`NumComponents` | Number of components in [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid), `[1...3]`
+`b16BitsPerComponent` | If true, the components in [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid) are `uint16`, else `uint32`.
 
 <a id="d3d12ddi_node_list_entry_0108"></a>
 
@@ -2998,11 +2894,11 @@ Member                           | Definition
 ---------                        | ----------
 `FinalName` | Final name of the node being output to after any optional renames done at the API (from the point of view of the node doing output).  See [D3D12DDI_NODE_ID_0108](#d3d12ddi_node_id_0108).  If `ArraySize > 1`, this is the NodeID of beginning of the array of nodes being output to.
 `OutputIndex` | 0 based index of this output in the set of outputs for this node (node array output counts as one entry in this set).  This index matches the order the outputs are declared, and how they appear in the `pOutputs` arrays in [D3D12DDI_BROADCASTING_LAUNCH_NODE_PROPERTIES_0108](#d3d12ddi_broadcasting_launch_node_properties_0108), [D3D12DDI_COALESCING_LAUNCH_NODE_PROPERTIES_0108](#d3d12ddi_coalescing_launch_node_properties_0108) and [D3D12DDI_THREAD_LAUNCH_NODE_PROPERTIES_0108](#d3d12ddi_thread_launch_node_properties_0108).  As such, this value is redundant, but provided for clarity.  Other members of this struct, `D3D12DDI_NODE_OUTPUT_0108`, reference nodes using this indexing space.
-`NodeIOKind` | The class of output.  See the output enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108). And see [Node output declaration](../WorkGraphs.md#node-output-declaration).
-`NodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108). And see [Node output declaration](../WorkGraphs.md#node-output-declaration).
+`NodeIOKind` | The class of output.  See the output enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108). And see [Node output declaration](work-graphs.md#node-output-declaration).
+`NodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108). And see [Node output declaration](work-graphs.md#node-output-declaration).
 `RecordSizeInBytes` | Size of the output record.  Can be 0 if `NodeIOKind` is [D3D12DDI_NODE_IO_KIND_EMPTY_OUTPUT_0108](#d3d12ddi_node_io_kind_0108).
-`bAllowSparseNodes` | Whether sparse nodes are allowed.  This comes from the `[`[AllowSparseNodes](../WorkGraphs.md#node-output-attributes)`]` attribute on a node output, or can be overridden at the API, so the final status is indicated here.
-`pRecordDispatchGrid` | If `nullptr`, the output record doesn't contain [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid).  Else, points to a description of how [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid) appears in the output record.  See [D3D12DDI_RECORD_DISPATCH_GRID_0108](#d3d12ddi_record_dispatch_grid_0108).
+`bAllowSparseNodes` | Whether sparse nodes are allowed.  This comes from the `[`[AllowSparseNodes](work-graphs.md#node-output-attributes)`]` attribute on a node output, or can be overridden at the API, so the final status is indicated here.
+`pRecordDispatchGrid` | If `nullptr`, the output record doesn't contain [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid).  Else, points to a description of how [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid) appears in the output record.  See [D3D12DDI_RECORD_DISPATCH_GRID_0108](#d3d12ddi_record_dispatch_grid_0108).
 `pMaxRecords` |  Maximum number of output records that a thread group will output to this output node/array.  If the output record budget for this output is shared with another output, `pMaxRecords` is `nullptr` and `pMaxRecordsSharedWithOutputIndex` is specified instead.  If the shader declared `[MaxRecordsSharedWith()]`, it is valid to override it with `pMaxRecords`, which makes the output budget no longer shared.
 `pMaxRecordsSharedWithOutputIndex` | If this output shares its output record budget with another output, this points to the 0 based index of that output based on the order they are declared, and how they appear in the `pOutputs` arrays in [D3D12DDI_BROADCASTING_LAUNCH_NODE_PROPERTIES_0108](#d3d12ddi_broadcasting_launch_node_properties_0108), [D3D12DDI_COALESCING_LAUNCH_NODE_PROPERTIES_0108](#d3d12ddi_coalescing_launch_node_properties_0108) and [D3D12DDI_THREAD_LAUNCH_NODE_PROPERTIES_0108](#d3d12ddi_thread_launch_node_properties_0108).  The output that is pointed to will have `pMaxRecords` specified.  If the current output does not share its output record budget, `pMaxRecordsSharedWithOutputIndex` is `nullptr`. If the shader declared `[MaxRecords()]`, it is valid to override it with `pMaxRecordsSharedWithOutputIndex`, which makes the output budget now shared with another output.
 `ArraySize` | At least 1.  This is the number of nodes this output refers to, in an array starting with the NodeID specified in `FinalName`.  `0xffffffff` means unbounded node array size, which is only permitted when `bAllowSparseNodes` is true.
@@ -3042,8 +2938,8 @@ Member                           | Definition
 ---------                        | ----------
 `FinalName` | Final name of the node after any optional renames done at the API.  See [D3D12DDI_NODE_ID_0108](#d3d12ddi_node_id_0108).
 `bProgramEntry` | The current node is a program entry.  If so, this node will be listed in the `pEntrypoints` list in [D3D12DDI_WORK_GRAPH_DESC_0108](#d3d12ddi_work_graph_desc_0108).  As such this parameter is redundant, but it is present for clarity.  The shader may not have declared it is an entrypoint but the runtime may have determined it must be one, or at the API the choice may have been overridden in some way.  This will never be false for a node that is not targetted by any other nodes in the graph.
-`InputNodeIOKind` |  The class of input.  See the input enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108).  And see [Node input declaration](../WorkGraphs.md#node-input-declaration).
-`InputNodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108).  For an input, the only flag that applies is `D3D12DDI_NODE_IO_FLAG_TRACK_RW_INPUT_SHARING`.  Also see [Node input declaration](../WorkGraphs.md#node-input-declaration).
+`InputNodeIOKind` |  The class of input.  See the input enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108).  And see [Node input declaration](work-graphs.md#node-input-declaration).
+`InputNodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108).  For an input, the only flag that applies is `D3D12DDI_NODE_IO_FLAG_TRACK_RW_INPUT_SHARING`.  Also see [Node input declaration](work-graphs.md#node-input-declaration).
 `InputRecordSizeInBytes` | Size of the input record.  Can be 0 if `InputNodeIOKind` is [D3D12DDI_NODE_IO_KIND_EMPTY_INPUT_0108](#d3d12ddi_node_io_kind_0108).
 `GroupSharedUsageInBytes` | Size of group shared usage by the node.
 `MaxRecursionDepth` | Max recursion declared by shader (if at all). 0 means no recursion.
@@ -3051,7 +2947,7 @@ Member                           | Definition
 `pShareInputOfNode` |  `nullptr` if the node isn't sharing another node's input.  If this node is sharing its input from another node in the work graph, this points to it: [D3D12DDI_NODE_0108](#d3d12ddi_node_0108). If multiple nodes are in an input sharing set, all but the source node will point to the source node, and the source will instead set the `pNodesSharingInputWithThisNode` parameter to point to the others.
 `pDispatchGrid` | If the node has a fixed dispatch grid size, it is specified here as a 3 component value.  Otherwise this is `nullptr`
 `pMaxDispatchGrid` | If the node gets its dispatch grid size as part of its input record, the max dispatch grid size is specified here as a 3 component value.  Otherwise this is `nullptr`.
-`pRecordDispatchGrid` | If `nullptr`, the input record doesn't contain [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid).  Else, points to a description of how [SV_DispatchGrid](../WorkGraphs.md#sv_dispatchgrid) appears in the input record.  See [D3D12DDI_RECORD_DISPATCH_GRID_0108](#d3d12ddi_record_dispatch_grid_0108).
+`pRecordDispatchGrid` | If `nullptr`, the input record doesn't contain [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid).  Else, points to a description of how [SV_DispatchGrid](work-graphs.md#sv_dispatchgrid) appears in the input record.  See [D3D12DDI_RECORD_DISPATCH_GRID_0108](#d3d12ddi_record_dispatch_grid_0108).
 `pInputNodes` | List ([D3D12DDI_NODE_LIST_ENTRY_0108](#d3d12ddi_node_list_entry_0108)) of nodes ([D3D12DDI_NODE_0108](#d3d12ddi_node_0108)) that target this node. `pInputNodes` is `nullptr` if no nodes target this node.
 `pNodesSharingInputWithThisNode` | List ([D3D12DDI_NODE_LIST_ENTRY_0108](#d3d12ddi_node_list_entry_0108)) of nodes ([D3D12DDI_NODE_0108](#d3d12ddi_node_0108)) that share input with this node. `pNodesSharingInputWithThisNode` is `nullptr` if no nodes share input with this node.
 `NumOutputs` | Number of nodes this node outputs to.
@@ -3089,10 +2985,10 @@ Member                           | Definition
 ---------                        | ----------
 `FinalName` | Final name of the node after any optional renames done at the API.  See [D3D12DDI_NODE_ID_0108](#d3d12ddi_node_id_0108).
 `bProgramEntry` | The current node is a program entry.  If so, this node will be listed in the  `pEntrypoints` list in [D3D12DDI_WORK_GRAPH_DESC_0108](#d3d12ddi_work_graph_desc_0108).  As such this parameter is redundant, but it is present for clarity.  The shader may not have declared it is an entrypoint but the runtime may have determined it must be one, or at the API the choice may have been overridden in some way.  This will never be false for a node that is not targetted by any other nodes in the graph.
-`InputNodeIOKind` |  The class of input.  See the input enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108).  And see [Node input declaration](../WorkGraphs.md#node-input-declaration).
-`InputNodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108).  For an input, the only flag that applies is `D3D12DDI_NODE_IO_FLAG_TRACK_RW_INPUT_SHARING`.  Also see [Node input declaration](../WorkGraphs.md#node-input-declaration).
+`InputNodeIOKind` |  The class of input.  See the input enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108).  And see [Node input declaration](work-graphs.md#node-input-declaration).
+`InputNodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108).  For an input, the only flag that applies is `D3D12DDI_NODE_IO_FLAG_TRACK_RW_INPUT_SHARING`.  Also see [Node input declaration](work-graphs.md#node-input-declaration).
 `InputRecordSizeInBytes` | Size of the input record.  Can be 0 if `InputNodeIOKind` is [D3D12DDI_NODE_IO_KIND_EMPTY_INPUT_0108](#d3d12ddi_node_io_kind_0108).
-`InputMaxRecordArraySize` | Maximum number of input records the shader has declared that can be input to a launch of a thread group for this coalescing launch node.  See [Node input declaration](../WorkGraphs.md#node-input-declaration).
+`InputMaxRecordArraySize` | Maximum number of input records the shader has declared that can be input to a launch of a thread group for this coalescing launch node.  See [Node input declaration](work-graphs.md#node-input-declaration).
 `GroupSharedUsageInBytes` | Size of group shared usage by the node.
 `MaxRecursionDepth` | Max recursion declared by shader (if at all). 0 means no recursion.
 `pLocalRootArgumentsTableIndex` | If a local root signature has been associated with the shader and/or the shader explicitly declared a local root argument table index it wants to use, the 0 based index is pointed to here.  The runtime may have auto-assigned a location.  If no local root signature has been associated with the shader, this will be `nullptr`.
@@ -3133,8 +3029,8 @@ Member                           | Definition
 ---------                        | ----------
 `FinalName` | Final name of the node after any optional renames done at the API.  See [D3D12DDI_NODE_ID_0108](#d3d12ddi_node_id_0108).
 `bProgramEntry` | The current node is a program entry.  If so, this node will be listed in the  `pEntrypoints` list in [D3D12DDI_WORK_GRAPH_DESC_0108](#d3d12ddi_work_graph_desc_0108).  As such this parameter is redundant, but it is present for clarity.  The shader may not have declared it is an entrypoint but the runtime may have determined it must be one, or at the API the choice may have been overridden in some way.  This will never be false for a node that is not targetted by any other nodes in the graph.
-`InputNodeIOKind` |  The class of input.  See the input enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108).  And see [Node input declaration](../WorkGraphs.md#node-input-declaration).
-`InputNodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108).  For an input, the only flag that applies is `D3D12DDI_NODE_IO_FLAG_TRACK_RW_INPUT_SHARING`.  Also see [Node input declaration](../WorkGraphs.md#node-input-declaration).
+`InputNodeIOKind` |  The class of input.  See the input enums in [D3D12DDI_NODE_IO_KIND_0108](#d3d12ddi_node_io_kind_0108).  And see [Node input declaration](work-graphs.md#node-input-declaration).
+`InputNodeIOFlags` |  See the flags within `D3D12DDI_NODE_IO_FLAG_NODE_FLAGS_MASK` in [D3D12DDI_NODE_IO_FLAGS_0108](#d3d12ddi_node_io_flags_0108).  For an input, the only flag that applies is `D3D12DDI_NODE_IO_FLAG_TRACK_RW_INPUT_SHARING`.  Also see [Node input declaration](work-graphs.md#node-input-declaration).
 `InputRecordSizeInBytes` | Size of the input record.  Can be 0 if `InputNodeIOKind` is [D3D12DDI_NODE_IO_KIND_EMPTY_INPUT_0108](#d3d12ddi_node_io_kind_0108).
 `GroupSharedUsageInBytes` | Size of group shared usage by the node.
 `MaxRecursionDepth` | Max recursion declared by shader (if at all). 0 means no recursion.
@@ -3274,7 +3170,7 @@ Member                           | Definition
 `NumNodes` | Number of nodes including already existing ones if an addition is happening.
 `pNodes` | List of pointers to node definitions. See [D3D12DDI_NODE_LIST_ENTRY_0108](#d3d12ddi_node_list_entry_0108) and [D3D12DDI_NODE_0108](#d3d12ddi_node_0108).  Even with the `D3D12DDI_WORK_GRAPH_FLAG_ADD_TO_EXISTING_WORK_GRAPH` flag, this is a list of all nodes in the graph.  New nodes appear at the start of the list.
 `NumEntrypoints` | Number of entrypoints including already existing ones if an addition is happening.
-`pEntrypoints` | List of pointers to entrypoints. See [D3D12DDI_NODE_LIST_ENTRY_0108](#d3d12ddi_node_list_entry_0108) and [D3D12DDI_NODE_0108](#d3d12ddi_node_0108). Even with the `D3D12DDI_WORK_GRAPH_FLAG_ADD_TO_EXISTING_WORK_GRAPH` flag, this is a list of all entrypoints.  New entrypoints appear at the start of the list and continue entrypoint index numbering after previous versions.  Suppose the initial version of a graph has two entrypoints.  This list would have two entries, and the driver must infer that they have entry point indices `[0]` and `[1]` respectively for record assignments from [DispatchGraph()](../WorkGraphs.md#dispatchgraph).  If an addition happens, with 3 new entrypoints, the list for the new graph version would have 5 entries, with the new entries at that start of the list. The driver must infer the entrypoint indices of the 3 new entries at the start of the list (e.g the entries with the new `Version`), so the full list would be `[2]`, `[3]`, `[4]`, `[0]`, `[1]`.  Ideally these assignments would have been provided by the runtime in the DDI so the driver wouldn't have to figure this out, but this was missed and deemed not important enough to fix.
+`pEntrypoints` | List of pointers to entrypoints. See [D3D12DDI_NODE_LIST_ENTRY_0108](#d3d12ddi_node_list_entry_0108) and [D3D12DDI_NODE_0108](#d3d12ddi_node_0108). Even with the `D3D12DDI_WORK_GRAPH_FLAG_ADD_TO_EXISTING_WORK_GRAPH` flag, this is a list of all entrypoints.  New entrypoints appear at the start of the list and continue entrypoint index numbering after previous versions.  Suppose the initial version of a graph has two entrypoints.  This list would have two entries, and the driver must infer that they have entry point indices `[0]` and `[1]` respectively for record assignments from [DispatchGraph()](work-graphs.md#dispatchgraph).  If an addition happens, with 3 new entrypoints, the list for the new graph version would have 5 entries, with the new entries at that start of the list. The driver must infer the entrypoint indices of the 3 new entries at the start of the list (e.g the entries with the new `Version`), so the full list would be `[2]`, `[3]`, `[4]`, `[0]`, `[1]`.  Ideally these assignments would have been provided by the runtime in the DDI so the driver wouldn't have to figure this out, but this was missed and deemed not important enough to fix.
 
 This is the definition of a state subobject of type `D3D12DDI_STATE_SUBOBJECT_TYPE_WORK_GRAPH` (see [D3D12DDI_STATE_SUBOBJECT_TYPE](#d3d12ddi_state_subobject_type)).
 

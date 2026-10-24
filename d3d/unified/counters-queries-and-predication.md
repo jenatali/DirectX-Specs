@@ -237,6 +237,8 @@ Since the Compute Shader honors predicated rendering, if a Dispatch call or an E
 
 Pixel-shader invocation counts are not counts of visible depth samples or unique output pixels. Helper invocations, early depth/stencil, per-sample shading and coarse shading affect that relationship; a historical per-pixel test inequality is not a universal modern pipeline contract.
 
+Pipeline statistics report invocations of nodes against the corresponding shader type.  So compute-based node shader invocations increment `CSInvocations`.
+
 The GSInvocations [Pipeline Statistics counter](#pipeline-statistics) reports the number of primitives input to the GS multiplied by the instance count per primitive. That is, each "instance" counts as a GSInvocation.
 
 <a id="mesh-statistics"></a>
@@ -1454,7 +1456,7 @@ The [truth table](#predication), [state/access restrictions](#predicate-state) a
 | `ID3D12GraphicsCommandList4::BeginRenderPass` | wrapper | DIRECT. Translated beginning-access CLEAR work honors the predicate; binding/barrier/boundary effects remain independent. |
 | [`ID3D12GraphicsCommandList4::BuildRaytracingAccelerationStructure`](acceleration-structures.md#buildraytracingaccelerationstructure) | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
 | [`ID3D12GraphicsCommandList4::CopyRaytracingAccelerationStructure`](acceleration-structures.md#copyraytracingaccelerationstructure) | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
-| `ID3D12GraphicsCommandList4::DispatchRays` | predicated | DIRECT/COMPUTE; BUNDLE only when that operation independently permits it. |
+| [`ID3D12GraphicsCommandList4::DispatchRays`](raytracing-pipelines.md#id3d12graphicscommandlist4dispatchrays) | predicated | DIRECT/COMPUTE; BUNDLE only when that operation independently permits it. |
 | [`ID3D12GraphicsCommandList4::EmitRaytracingAccelerationStructurePostbuildInfo`](acceleration-structures.md#emitraytracingaccelerationstructurepostbuildinfo) | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
 | `ID3D12GraphicsCommandList4::EndRenderPass` | wrapper | DIRECT. Translated ending-access RESOLVE work honors the predicate; boundary/synchronization effects remain independent. |
 | `ID3D12GraphicsCommandList4::ExecuteMetaCommand` | conditional | Permitted command-list types and the selected meta-command's contract. Execution predicate behavior depends on the meta-command contract; state-damage flags do not specify it. |

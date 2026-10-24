@@ -424,7 +424,7 @@ In order to be able to create a single-channel integer resource view,
 a resource must be created using the
 [CreateCommittedResource3](../D3D12EnhancedBarriers.md#id3d12device10-createcommittedresource3),
 [CreatePlacedResource2](../D3D12EnhancedBarriers.md#id3d12device10-createplacedresource2),
-or [CreateReservedResource2](../D3D12EnhancedBarriers.md#id3d12device10-createreservedresource2)
+or [CreateReservedResource2](resources.md#create-reserved-resource2)
 using the API fields, `NumCastableFormats` and `pCastableFormats`
 to specify the list of acceptable casts.
 
@@ -1394,43 +1394,15 @@ DSVs select 1D/2D, array, or multisampled variants; they do not expose buffer, 3
 
 ## Format support and capability queries
 
-`ID3D12Device::CheckFeatureSupport` selects a query with `Feature` and uses the corresponding data structure and `FeatureSupportDataSize`. The format-specific payloads below expose independent capabilities; a plane count or a successful query does not by itself permit every view or operation. Resource flags, casting, view shape and stage/operation conditions still apply.
+The [feature-discovery contract](devices-and-capabilities.md#feature-discovery) defines `ID3D12Device::CheckFeatureSupport`. The format-specific payloads below expose independent capabilities; a plane count or a successful query does not by itself permit every view or operation. Resource flags, casting, view shape and stage/operation conditions still apply.
 
 <a id="check-feature-support"></a>
 
-### ID3D12Device::CheckFeatureSupport
+### Feature-query dispatch and selected diagnostics
 
-#### Declaration
+<a id="id3d12devicecheckfeaturesupport"></a>
 
-```cpp
-HRESULT CheckFeatureSupport(
-        D3D12_FEATURE Feature,
-        void* pFeatureSupportData,
-        UINT FeatureSupportDataSize
-        );
-```
-
-#### Behavior
-
-Gets information about the features that are supported by the current graphics driver.
-
-#### Parameters
-
-`Feature`
-
-A constant from the [`D3D12_FEATURE`](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_feature) enumeration describing the feature(s) that you want to query for support.
-
-`[in, out] pFeatureSupportData`
-
-A pointer to a data structure that corresponds to the value of the *Feature* parameter. To determine the corresponding data structure for each constant, see [`D3D12_FEATURE`](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_feature).
-
-`FeatureSupportDataSize`
-
-The size of the structure pointed to by the *pFeatureSupportData* parameter.
-
-#### Return values
-
-Returns **S\_OK** if successful. Returns **E\_INVALIDARG** if an unsupported data type is passed to the *pFeatureSupportData* parameter or if a size mismatch is detected for the *FeatureSupportDataSize* parameter.
+The complete `ID3D12Device::CheckFeatureSupport` declaration, dispatch, payload-size and negotiation contract is defined in [Devices and capabilities](devices-and-capabilities.md#id3d12device-checkfeaturesupport). The format/MSAA-specific query cases and diagnostics remain defined here.
 
 #### Runtime validation for the selected query cases
 

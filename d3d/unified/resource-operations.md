@@ -347,7 +347,7 @@ The [legacy state model](synchronization.md#legacy-states) cannot combine `COPY_
 
 [Enhanced alias initialization](synchronization.md#enhanced-aliasing) and [legacy activation/initialization](synchronization.md#legacy-aliasing) define when clear, full copy or discard initializes reused storage. An operation's permission to initialize an alias is not blanket permission for arbitrary intersecting source/destination mappings. Reserved-resource duplicate mappings retain the [tile-copy limitations](#copytiles).
 
-For reserved-resource tile sharing, [data compatibility across tiled resources sharing tiles](../archive/D3D11_3_FunctionalSpec.htm#5.9.4.4.7%20Data%20Compatibility%20Across%20Tiled%20Resources%20Sharing%20Tiles) defines the dimension/format/render-target/depth-stencil compatibility cases, compatible block/uncompressed aliases, solid-color packed/non-packed case and all-zero inheritance case. D3D12's [aliasing synchronization and initialization](synchronization.md#legacy-aliasing) replaces that source's `TiledResourceBarrier` mechanism. That source's data-compatibility cases do not grant D3D12 intersecting-copy permission.
+For reserved-resource tile sharing, [data compatibility across tiled resources sharing tiles](resources.md#tiled-data-compatibility) defines the dimension/format/render-target/depth-stencil compatibility cases, compatible block/uncompressed aliases, solid-color packed/non-packed case and all-zero inheritance case. D3D12's [aliasing synchronization and initialization](synchronization.md#legacy-aliasing) replaces that source's `TiledResourceBarrier` mechanism. That source's data-compatibility cases do not grant D3D12 intersecting-copy permission.
 
 Ordinary copies must not use allocations created with `D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY` or `D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY`, including when the source and destination flags match.
 
@@ -754,7 +754,7 @@ Copies tiles from buffer to tiled resource or vice versa.
 
 Tile payloads have size `D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES` (65536). `BufferStartOffsetInBytes` is a byte offset into the linear buffer, which must contain the complete sequence of 64-KB tiles selected by the region. Exactly one copy-direction flag must be specified; that direction identifies which resource needs source access and which needs destination access. `NO_HAZARD` is deprecated and does not establish an application hazard promise or synchronization relaxation.
 
-The coordinate and region types are defined [below](#tile-types). Their shared packed-mip representation is useful to tile-mapping APIs, but `CopyTiles` itself cannot transfer packed mip tiles. For ordinary copies involving reserved resources, duplicate mappings that create hidden source/destination overlap yield undefined results; duplicated destination tiles produce undefined results unless the written data is identical. D3D11 overlap-copy guarantees must not be inferred for D3D12 self-copy.
+The shared coordinate and region types are defined in [Resources](resources.md#tile-types). Their shared packed-mip representation is useful to tile-mapping APIs, but `CopyTiles` itself cannot transfer packed mip tiles. For ordinary copies involving reserved resources, duplicate mappings that create hidden source/destination overlap yield undefined results; duplicated destination tiles produce undefined results unless the written data is identical. D3D11 overlap-copy guarantees must not be inferred for D3D12 self-copy.
 
 On COPY command lists, the debug layer reports an invalid layout if the tiled resource uses `D3D12_TEXTURE_LAYOUT_64KB_STANDARD_SWIZZLE` and `D3D12_FEATURE_DATA_D3D12_OPTIONS.StandardSwizzle64KBSupported` is FALSE. Cross-adapter resource-creation exceptions do not remove this checked COPY-list restriction.
 
@@ -839,90 +839,13 @@ Exactly one of `D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE` (
 
 #### D3D12_TILED_RESOURCE_COORDINATE
 
-##### Syntax
-
-```cpp
-typedef struct D3D12_TILED_RESOURCE_COORDINATE {
-  UINT X;
-  UINT Y;
-  UINT Z;
-  UINT Subresource;
-} D3D12_TILED_RESOURCE_COORDINATE;
-```
-
-##### Members
-
-`X`
-
-The x-coordinate of the tiled resource.
-
-`Y`
-
-The y-coordinate of the tiled resource.
-
-`Z`
-
-The z-coordinate of the tiled resource.
-
-`Subresource`
-
-The index of the subresource for the tiled resource.
-
-For mipmaps that use nonstandard tiling, or are packed, or both use nonstandard tiling and are packed, any subresource value that indicates any of the packed mipmaps all refer to the same tile. Additionally, the X coordinate is used to indicate a tile within the packed mip region, rather than a logical region of a single subresource. The Y and Z coordinates must be zero.
-
-##### Remarks
-
-This structure is used by the [CopyTiles](#copytiles), [CopyTileMappings](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12commandqueue-copytilemappings) and [UpdateTileMappings](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12commandqueue-updatetilemappings) methods.
+The complete `D3D12_TILED_RESOURCE_COORDINATE` definition is owned by [Resources](resources.md#d3d12-tiled-resource-coordinate).
 
 <a id="d3d12-tile-region-size"></a>
 
 #### D3D12_TILE_REGION_SIZE
 
-##### Syntax
-
-```cpp
-typedef struct D3D12_TILE_REGION_SIZE {
-  UINT   NumTiles;
-  BOOL   UseBox;
-  UINT   Width;
-  UINT16 Height;
-  UINT16 Depth;
-} D3D12_TILE_REGION_SIZE;
-```
-
-##### Members
-
-`NumTiles`
-
-The number of tiles in the tiled region.
-
-`UseBox`
-
-Specifies whether the runtime uses the **Width**, **Height**, and **Depth** members to define the region.
-
-If **TRUE**, the runtime uses the **Width**, **Height**, and **Depth** members to define the region. In this case, **NumTiles** should be equal to **Width** \* **Height** \* **Depth**.
-
-If **FALSE**, the runtime ignores the **Width**, **Height**, and **Depth** members and uses the **NumTiles** member to traverse tiles in the resource linearly across x, then y, then z (as applicable) and then spills over mipmaps/arrays in subresource order. For example, use this technique to map an entire resource at once.
-
-Regardless of whether you specify **TRUE** or **FALSE** for **UseBox**, you use a [D3D12_TILED_RESOURCE_COORDINATE](#d3d12-tiled-resource-coordinate) structure to specify the starting location for the region within the resource as a separate parameter outside of this structure by using x, y, and z coordinates.
-
-When the region includes mipmaps that are packed with nonstandard tiling, **UseBox** must be **FALSE** because tile dimensions are not standard and the app only knows a count of how many tiles are consumed by the packed area, which is per array slice. The corresponding (separate) starting location parameter uses x to offset into the flat range of tiles in this case, and y and z coordinates must each be 0.
-
-`Width`
-
-The width of the tiled region, in tiles. Used for buffer and 1D, 2D, and 3D textures.
-
-`Height`
-
-The height of the tiled region, in tiles. Used for 2D and 3D textures.
-
-`Depth`
-
-The depth of the tiled region, in tiles. Used for 3D textures or arrays. For arrays, used for advancing in depth jumps to next slice of same mipmap size, which isn't contiguous in the subresource counting space if there are multiple mipmaps.
-
-##### Remarks
-
-This structure is used by the [CopyTiles](#copytiles), [CopyTileMappings](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12commandqueue-copytilemappings) and [UpdateTileMappings](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12commandqueue-updatetilemappings) methods.
+The complete `D3D12_TILE_REGION_SIZE` definition is owned by [Resources](resources.md#d3d12-tile-region-size).
 
 <a id="d3d12-tile-copy-flags"></a>
 
@@ -2301,43 +2224,9 @@ typedef struct D3D12DDIARG_DISCARD_RESOURCE_0003
 } D3D12DDIARG_DISCARD_RESOURCE_0003;
 ```
 
-```cpp
-typedef struct D3D12DDI_TILED_RESOURCE_COORDINATE
-{
-    // Coordinate values below index tiles (not pixels or bytes).
-    UINT X; // Used for buffer, 1D, 2D, 3D
-    UINT Y; // Used for 2D, 3D
-    UINT Z; // Used for 3D
-    UINT Subresource; // indexes into mips, arrays. Used for 1D, 2D, 3D
-    // For mipmaps that are packed into a single tile, any subresource
-    // value that indicates any of the packed mips all refer to the same tile.
-} D3D12DDI_TILED_RESOURCE_COORDINATE;
-```
+The shared driver coordinate/region definition is owned by [Resources](resources.md#tiled-driver-types).
 
-```cpp
-typedef struct D3D12DDI_TILE_REGION_SIZE
-{
-    UINT NumTiles;
-    BOOL UseBox;  // TRUE: Uses width/height/depth parameters below to define the region.
-                  //   Width*Height*Depth must match NumTiles above.  (While
-                  //   this looks like redundant information, the application likely has to know
-                  //   how many tiles are involved anyway.)
-                  //   The downside to using the box parameters is that one update region cannot
-                  //   span mipmaps (though it can span array slices via the depth parameter).
-                  //
-                  // FALSE: Ignores width/height/depth parameters - NumTiles just traverses tiles in
-                  //   the resource linearly across x, then y, then z (as applicable) then spilling over
-                  //   mips/arrays in subresource order.  Useful for just mapping an entire resource
-                  //   at once.
-                  //
-                  // In either case, the starting location for the region within the resource
-                  // is specified as a separate parameter outside this struct.
-
-    UINT Width;   // Used for buffer, 1D, 2D, 3D
-    UINT16 Height; // Used for 2D, 3D
-    UINT16 Depth; // For 3D or arrays.  For arrays, advancing in depth skips to next slice of same mip size.
-} D3D12DDI_TILE_REGION_SIZE;
-```
+The shared driver coordinate/region definition is owned by [Resources](resources.md#tiled-driver-types).
 
 ```cpp
 typedef enum D3D12DDI_TILE_COPY_FLAGS

@@ -264,35 +264,7 @@ typedef struct D3D12_INDEX_BUFFER_VIEW
 } D3D12_INDEX_BUFFER_VIEW;
 ```
 
-```cpp
-typedef struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE
-{
-    D3D12_GPU_VIRTUAL_ADDRESS   StartAddress;
-    UINT64                      SizeInBytes;
-} D3D12_GPU_VIRTUAL_ADDRESS_RANGE;
-```
-
-```cpp
-typedef struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE
-{
-    D3D12_GPU_VIRTUAL_ADDRESS   StartAddress;
-    UINT64                      SizeInBytes;
-    UINT64                      StrideInBytes;
-} D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE;
-```
-
-```cpp
-typedef struct D3D12_DISPATCH_RAYS_DESC
-{
-    D3D12_GPU_VIRTUAL_ADDRESS_RANGE RayGenerationShaderRecord;
-    D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE MissShaderTable;
-    D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE HitGroupTable;
-    D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE CallableShaderTable;
-    UINT Width;
-    UINT Height;
-    UINT Depth;
-} D3D12_DISPATCH_RAYS_DESC;
-```
+The complete [D3D12_DISPATCH_RAYS_DESC](raytracing-pipelines.md#d3d12_dispatch_rays_desc), [D3D12_GPU_VIRTUAL_ADDRESS_RANGE](raytracing-pipelines.md#d3d12_gpu_virtual_address_range) and [D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE](raytracing-pipelines.md#d3d12_gpu_virtual_address_range_and_stride) declarations and field contracts are defined with ray dispatch. The exact indirect payload sizes, offsets and concatenation rules below remain defined here.
 
 The enum/union above describes the signature on the CPU; it is not copied into each argument record. Only the selected payload is stored. These are byte sizes, not host-language alignments to insert between arguments.
 
@@ -373,7 +345,7 @@ Exactly one work argument is required, and it must be the last argument descript
 | `DRAW` / `DRAW_INDEXED` | Graphics | [Direct draws and IA/VS state](vertex-processing.md#direct-draws); [graphics pipelines](pipeline-state.md#graphics-description) |
 | `DISPATCH` | Compute | [Compute stage](compute.md#stage-model), [Dispatch](compute.md#dispatch), [grid dimensions](compute.md#shared-grid-limits) |
 | `DISPATCH_MESH` | Graphics | [MeshShaderTier and shader requirements](amplification-and-mesh-shaders.md#availability), [DispatchMesh](amplification-and-mesh-shaders.md#dispatchmesh), [AS payload/child-grid contract](amplification-and-mesh-shaders.md#payload-and-amplification), [shared grid limits](compute.md#shared-grid-limits) |
-| `DISPATCH_RAYS` | Compute | [Raytracing tier 1.1](../Raytracing.md#d3d12_raytracing_tier), [DispatchRays](../Raytracing.md#dispatchrays), [descriptor and shader-table limits](../Raytracing.md#d3d12_dispatch_rays_desc) |
+| `DISPATCH_RAYS` | Compute | [Raytracing tier 1.1](../Raytracing.md#d3d12_raytracing_tier), [DispatchRays](raytracing-pipelines.md#id3d12graphicscommandlist4dispatchrays), [descriptor and shader-table limits](raytracing-pipelines.md#d3d12_dispatch_rays_desc) |
 
 `DISPATCH_MESH` consumes the standalone three-`UINT` payload, not a new argument-description union member. `ByteStride` includes the other selected arguments and any record-end padding; it is not required to equal 12 merely because the final work argument is a mesh dispatch.
 
@@ -381,7 +353,7 @@ The [full mesh/compute grid rules](compute.md#shared-grid-limits) apply to each 
 
 When a command signature configured for `DispatchRays` is passed to `ExecuteIndirect`, a raytracing pipeline state must be currently set on the command list otherwise behavior is undefined.
 
-It is invalid for an application to modify the contents of [shader tables](../Raytracing.md#shader-tables) from an ExecuteIndirect() call if that ExecuteIndirect() call references the same shader tables (e.g. via DispatchRays()).
+It is invalid for an application to modify the contents of [shader tables](raytracing-pipelines.md#shader-tables) from an ExecuteIndirect() call if that ExecuteIndirect() call references the same shader tables (e.g. via DispatchRays()).
 
 <a id="incrementing-constant"></a>
 
@@ -651,7 +623,7 @@ The debug layer checks the argument/count resources' indirect-argument access an
 
 CPU signature validation does not establish that all GPU-resident payload values are valid. Vertex/index views retain their [format, extent, alignment and fetch rules](vertex-processing.md#buffer-views). Index-buffer payloads must specify a valid [index format](vertex-processing.md#d3d12_index_buffer_view); signature creation cannot inspect GPU-resident `Format` values. Root GPU virtual addresses retain the [root-descriptor](binding.md#root-descriptors) and [constant-buffer alignment](binding.md#id3d12graphicscommandlist-setgraphicsrootconstantbufferview) contracts. A root descriptor contains an address, not a descriptor-table handle and not a size/format/stride triplet. Root SRV/UAVs retain the buffer-only, supported raw/structured interpretation of the binding owner; indirect execution does not add typed-buffer or texture root descriptors.
 
-Non-null GPU addresses must identify valid accessible storage for the addressed operation, including its subresource/access and lifetime requirements. Null-binding cases remain those of the corresponding direct view/root-binding contract. [GetGPUVirtualAddress](resources.md#resource-gpu-address) supplies buffer addresses; adding a byte offset does not waive VB/IB/CB or root-view alignment. The indirect data buffer's four-byte alignment is separate from alignment of the GPU addresses stored in it. Shader-table addresses retain their [raytracing alignment and bounds](../Raytracing.md#d3d12_dispatch_rays_desc).
+Non-null GPU addresses must identify valid accessible storage for the addressed operation, including its subresource/access and lifetime requirements. Null-binding cases remain those of the corresponding direct view/root-binding contract. [GetGPUVirtualAddress](resources.md#resource-gpu-address) supplies buffer addresses; adding a byte offset does not waive VB/IB/CB or root-view alignment. The indirect data buffer's four-byte alignment is separate from alignment of the GPU addresses stored in it. Shader-table addresses retain their [raytracing alignment and bounds](raytracing-pipelines.md#d3d12_dispatch_rays_desc).
 
 <a id="recording-contexts"></a>
 
@@ -885,7 +857,7 @@ typedef VOID ( APIENTRY* PFND3D12DDI_EXECUTE_INDIRECT )(
 
 The size callback returns the driver's private command-signature storage size; creation returns an `HRESULT`; destruction releases the driver object. `PFND3D12DDI_EXECUTE_INDIRECT` receives the command list and signature handles, maximum count, and argument/count buffer placements. Each placement's `BaseAddress.UMD` carries the resource handle and byte offset; a null count-resource handle denotes the no-count-buffer form. The driver/hardware must interpret the selected argument format and offsets and enforce the unsigned minimum of API maximum and GPU count. The [canonical state-reset contract](command-list-state.md#indirect) assigns the post-call resetting DDI calls to the runtime.
 
-Mesh work's [DispatchMesh DDI and stage responsibilities](amplification-and-mesh-shaders.md#mesh-driver), and ray work's [raytracing driver contract](../Raytracing.md#ddi), remain distinct from signature creation and indirect interpretation. Tier-1.1's system-generated constant consumes no argument bytes; an implementation must supply its zero-based sequence and reset the affected state.
+Mesh work's [DispatchMesh DDI and stage responsibilities](amplification-and-mesh-shaders.md#mesh-driver), and ray work's [raytracing driver contract](raytracing-pipelines.md#driver-dispatch), remain distinct from signature creation and indirect interpretation. Tier-1.1's system-generated constant consumes no argument bytes; an implementation must supply its zero-based sequence and reset the affected state.
 
 Both of the following implementations are acceptable:
 
