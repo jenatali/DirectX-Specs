@@ -200,7 +200,7 @@ Z_rt = Viewport.MinDepth + Z * (Viewport.MaxDepth - Viewport.MinDepth)
 
 An additional effect of the Viewport is that in the Output Merger, just before the final rounding of z to depth-buffer format before depth compare,
 the z value is always clamped: `z = min(max(Viewport.MinDepth,Viewport.MaxDepth), max(min(Viewport.MinDepth,Viewport.MaxDepth),z))`, in compliance
-with the [Floating Point Rules](../archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules) for min and max. This clamping occurs regardless of where z came from:
+with the [Floating Point Rules](numeric-and-data-rules.md#numeric-3-1) for min and max. This clamping occurs regardless of where z came from:
 out of interpolation, or from z output by the Pixel Shader (replacing the interpolated value). Z input to the Pixel Shader is not clamped (since
 the clamp described here occurs after the Pixel Shader).
 
@@ -354,7 +354,7 @@ converted to fixed-point, to evenly distribute precision across the RenderTarget
 culling. The [Rasterizer](rasterization.md#rasterization) must support
 16.8
 (integer.fraction) fixed point precision for x and y. Particularly for the fractional part, the requirement is EXACTLY 8 bits.
-This conversion is also subject to the rules specified in [float-to-fixed](../archive/D3D11_3_FunctionalSpec.htm#FLOATtoFIXED), including round-to-nearest.
+This conversion is also subject to the rules specified in [float-to-fixed](numeric-and-data-rules.md#numeric-3-2-4-1), including round-to-nearest.
 
 After the [Scissor Test](#scissor) has been applied, the number of pixels along a given RenderTarget axis (x or y) that must be addressable starting from
 a base location is at least `2^15`.
@@ -383,7 +383,7 @@ produce INF.
 
 ### Interpolator setup
 
-Attribute Interpolators follow the [Floating Point Rules](../archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules), including propagation of
+Attribute Interpolators follow the [Floating Point Rules](numeric-and-data-rules.md#numeric-3-1), including propagation of
 NaN and handling of +/-INF. Interpolator setup is done based on vertex positions that have already been
 converted (snapped) to whatever [fixed-point](#rasterizer-precision) representation is supported by the Rasterizer
 (this is also stated in the [Coordinate Snapping](#coordinate-snapping) section).

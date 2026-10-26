@@ -148,6 +148,10 @@ Parameter                           | Definition
 
 ### D3D12_STATE_SUBOBJECT_TYPE
 
+The [database input and dependency restoration contract](state-object-databases-and-identity.md#storage-only-forms) defines recorded descriptions, serialized root-signature forms, existing-collection keys and growth-parent keys. `D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION_BY_KEY` is a database input form, not permission to pass that storage-only subobject to device `CreateStateObject`. Actual creation, linking, associations and growth remain subject to this chapter.
+
+Offline compilation uses [D3D12_COMPILER_EXISTING_COLLECTION_DESC](compiler-invocation-and-cache-output.md#d3d12_compiler_existing_collection_desc) with `D3D12_STATE_SUBOBJECT_TYPE_COMPILER_EXISTING_COLLECTION`, rather than a device collection or database key. [Compiler inputs and ownership](compiler-invocation-and-cache-output.md#input-ownership), [CompileStateObject](compiler-invocation-and-cache-output.md#id3d12compiler-compilestateobject) and [CompileAddToStateObject](compiler-invocation-and-cache-output.md#id3d12compiler-compileaddtostateobject) define target validation, collection/parent provenance and compiler-specific lifetimes. This is not permission to pass a compiler collection to device creation.
+
 ```cpp
 typedef enum D3D12_STATE_SUBOBJECT_TYPE
 {

@@ -115,7 +115,7 @@ If **ppDevice** is **NULL** and the function succeeds, **S\_FALSE** is returned,
 
 #### Context
 
-`D3D12CreateDevice` provides a singleton per adapter. If a Direct3D 12 singleton device already exists in the current process for a given adapter, then a subsequent call to **D3D12CreateDevice** returns the existing device. If the current Direct3D 12 device is in a removed state (that is, [ID3D12Device::GetDeviceRemovedReason](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-getdeviceremovedreason) returns a failing HRESULT), then **D3D12CreateDevice** fails instead of returning the existing device. The sameness of two adapters (that is, they have the same identity) is determined by comparing their LUIDs, not their pointers.
+`D3D12CreateDevice` provides a singleton per adapter. If a Direct3D 12 singleton device already exists in the current process for a given adapter, then a subsequent call to **D3D12CreateDevice** returns the existing device. If the current Direct3D 12 device is in a removed state (that is, [ID3D12Device::GetDeviceRemovedReason](diagnostics.md#id3d12device-getdeviceremovedreason) returns a failing HRESULT), then **D3D12CreateDevice** fails instead of returning the existing device. The sameness of two adapters (that is, they have the same identity) is determined by comparing their LUIDs, not their pointers.
 
 In order to be sure to pick up the first adapter that supports D3D12, use the following code.
 
@@ -283,7 +283,7 @@ HRESULT D3D12GetInterface(REFCLSID rclsid, REFIID riid, void **ppvDebug);
 
 #### Behavior
 
-Retrieves an interface selected by class and interface identifiers. Supports debug, tools, [DRED](https://learn.microsoft.com/en-us/windows/win32/direct3d12/use-dred), and SDK configuration interfaces.
+Retrieves an interface selected by class and interface identifiers. Supports debug, tools, [DRED](diagnostics.md#dred), and SDK configuration interfaces.
 
 #### Parameters
 
@@ -302,9 +302,9 @@ The following CLSIDs are defined.
 
 They correspond, respectively, to the following interfaces.
 
-- [ID3D12Debug interface](https://learn.microsoft.com/en-us/windows/win32/api/d3d12sdklayers/nn-d3d12sdklayers-id3d12debug)
+- [ID3D12Debug interface](diagnostics.md#debug-configuration)
 - [ID3D12Tools interface](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12tools)
-- [ID3D12DeviceRemovedExtendedDataSettings interface](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12deviceremovedextendeddatasettings)
+- [ID3D12DeviceRemovedExtendedDataSettings interface](diagnostics.md#dred-settings)
 - [ID3D12SDKConfiguration interface](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12sdkconfiguration)
 
 `riid`
@@ -318,6 +318,10 @@ The globally unique identifier (**GUID**) for the SDK configuration interface. T
 Type: **[void](https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types)\*\***
 
 The `out` parameter that contains the requested interface on return (for example, the SDK configuration interface), as a pointer to pointer to void. See [ID3D12SDKConfiguration](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nn-d3d12-id3d12sdkconfiguration).
+
+The [state-object database factory](state-object-databases-and-identity.md#database-factory) is retrieved with `CLSID_D3D12StateObjectFactory` and its database-factory interface. The [application identity configuration interface](state-object-databases-and-identity.md#id3d12applicationidentity-setapplicationidentity) uses `CLSID_D3D12ApplicationIdentity`. Global identity retrieval through this function and factory-scoped identity retrieval through [GetConfigurationInterface](#id3d12devicefactory-getconfigurationinterface) retain their distinct configuration and snapshot rules.
+
+The [shader-cache registration factory](shader-cache-registration.md#factory-bootstrap) is retrieved using `CLSID_D3DShaderCacheInstallerFactory` and `IID_ID3DShaderCacheInstallerFactory`. It creates installers and read-only explorers; it is not an `ID3D12DeviceFactory` or a compiler factory. Its client, catalog and object-lifetime contracts are defined there.
 
 #### Return values
 
@@ -1421,7 +1425,7 @@ TRUE if the hardware supports textures with the 64KB standard swizzle pattern. S
 
 `CrossNodeSharingTier`
 
-A [D3D12_CROSS_NODE_SHARING_TIER](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_cross_node_sharing_tier) enumeration constant that specifies the level of sharing across nodes of an adapter that has multiple nodes, such as Tier 1 Emulated, Tier 1, or Tier 2.
+A [D3D12_CROSS_NODE_SHARING_TIER](sharing-and-interoperability.md#cross-node-sharing-tier) enumeration constant that specifies the level of sharing across nodes of an adapter that has multiple nodes, such as Tier 1 Emulated, Tier 1, or Tier 2.
 
 `CrossAdapterRowMajorTextureSupported`
 
@@ -1573,7 +1577,7 @@ Indicates whether 64KB-aligned MSAA textures are supported.
 
 `SharedResourceCompatibilityTier`
 
-Type: **[D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_shared_resource_compatibility_tier)**
+Type: **[D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER](sharing-and-interoperability.md#cross-api-compatibility)**
 
 Indicates the tier of cross-API sharing support.
 
@@ -1582,6 +1586,8 @@ Indicates the tier of cross-API sharing support.
 Type: **[BOOL](https://learn.microsoft.com/en-us/windows/desktop/winprog/windows-data-types)**
 
 Indicates native 16-bit shader operations are supported. These operations require shader model 6\_2. For more information, see the [16-Bit Scalar Types](https://github.com/microsoft/DirectXShaderCompiler/wiki/16-Bit-Scalar-Types) HLSL reference.
+
+The complete [sharing capability-domain definitions](sharing-and-interoperability.md#adapter-domains) distinguish linked-node sharing, unlinked cross-adapter sharing and cross-API resource compatibility. The [cross-API format-tier table](sharing-and-interoperability.md#cross-api-compatibility) remains qualified pending feature-owner clarification; it does not settle the separate DISPLAYABLE query's scope.
 
 <a id="d3d12_feature_data_d3d12_options11"></a>
 
@@ -1668,7 +1674,7 @@ typedef struct D3D12_FEATURE_DATA_SHADER_CACHE {
 
 `SupportFlags`
 
-Type: [**D3D12\_SHADER\_CACHE\_SUPPORT\_FLAGS**](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_cache_support_flags)
+Type: [**D3D12\_SHADER\_CACHE\_SUPPORT\_FLAGS**](shader-delivery-and-caching.md#d3d12-shader-cache-support-flags)
 
 Indicates the level of caching supported.
 
@@ -1751,15 +1757,15 @@ typedef struct D3D12_FEATURE_DATA_CROSS_NODE {
 
 `SharingTier`
 
-Type: **[D3D12_CROSS_NODE_SHARING_TIER](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/ne-d3d12-d3d12_cross_node_sharing_tier)**
+Type: **[D3D12_CROSS_NODE_SHARING_TIER](sharing-and-interoperability.md#cross-node-sharing-tier)**
 
-Indicates the tier of cross-adapter sharing support.
+Indicates the tier of sharing across linked nodes of the adapter. Linked-node sharing is distinct from unlinked cross-adapter sharing.
 
 `AtomicShaderInstructions`
 
 Type: **[BOOL](https://learn.microsoft.com/en-us/windows/desktop/winprog/windows-data-types)**
 
-Indicates there is support for shader instructions which operate across adapters.
+Indicates support for atomic shader instructions across linked nodes of the adapter.
 
 <a id="d3d12_feature_data_displayable"></a>
 
@@ -1774,7 +1780,7 @@ typedef struct D3D12_FEATURE_DATA_DISPLAYABLE {
 } D3D12_FEATURE_DATA_DISPLAYABLE;
 ```
 
-`DisplayableTexture` is the output flag for displayable-texture support. `SharedResourceCompatibilityTier` uses [D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shared_resource_compatibility_tier), whose format sets comprise the basic tier-0 formats, additional typeless formats at tier 1, and NV12 at tier 2. The owning enumeration defines those format sets. Both fields are outputs; neither is a request to create, share or present a resource.
+`DisplayableTexture` is the output flag for displayable-texture support. `SharedResourceCompatibilityTier` uses [D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER](sharing-and-interoperability.md#cross-api-compatibility). The owning table's format-tier coverage remains visibly qualified pending feature-owner clarification. Both fields are outputs; neither is a request to create, share or present a resource.
 
 > **Draft qualification:** The precise resource/heap flags and shapes governed by `DisplayableTexture`, and the scope of `SharedResourceCompatibilityTier` within this query, remain unresolved pending feature-owner follow-up. This query is not a presentability guarantee.
 
@@ -2133,13 +2139,7 @@ typedef struct D3D12_FEATURE_DATA_SHADERCACHE_ABI_SUPPORT
 } D3D12_FEATURE_DATA_SHADERCACHE_ABI_SUPPORT;
 ```
 
-```cpp
-typedef union D3D12_VERSION_NUMBER
-{
-    UINT64 Version;
-    UINT16 VersionParts[4];
-} D3D12_VERSION_NUMBER;
-```
+The shared [D3D12_VERSION_NUMBER declaration and encoding](state-object-databases-and-identity.md#d3d12_version_number) define the version fields below. Compiler/profile versions and the inclusive ABI range retain the distinct query meanings defined here.
 
 | Member | Reporting meaning |
 | --- | --- |
@@ -2151,7 +2151,11 @@ typedef union D3D12_VERSION_NUMBER
 
 `D3D12_FEATURE_SHADER_CACHE_ABI_SUPPORT` takes no input fields. Use `sizeof(D3D12_FEATURE_DATA_SHADERCACHE_ABI_SUPPORT)`, including the inline 128-element `WCHAR` adapter-family array. The caller does not pass an ABI request ceiling or an output-array pointer/count. All fields are outputs.
 
-`MinimumABISupportVersion` through `MaximumABISupportVersion` is an inclusive supported ABI range. `CompilerVersion` and `ApplicationProfileVersion` use `D3D12_VERSION_NUMBER`, whose `Version` member and four `VersionParts` elements are alternative representations of the same 64-bit value. These values describe compiler/cache compatibility, not shader-model support or feature levels. The [compiler/driver ABI contract](../ShaderCompilerPlugin.md#struct-d3d12ddi_shadercache_abi_support_data) defines adapter-family, ABI-range and compiler/profile matching; [cache registration](../ShaderCacheRegistrationAPI.md) retains precompiled-database selection. Query failure does not establish a default ABI range or a universally valid zeroed output.
+`MinimumABISupportVersion` through `MaximumABISupportVersion` is an inclusive supported ABI range. `CompilerVersion` and `ApplicationProfileVersion` use [D3D12_VERSION_NUMBER](state-object-databases-and-identity.md#d3d12_version_number), whose `Version` member and four `VersionParts` elements are alternative representations of the same 64-bit value. These values describe compiler/cache compatibility, not shader-model support or feature levels. The [compiler/driver ABI contract](../ShaderCompilerPlugin.md#struct-d3d12ddi_shadercache_abi_support_data) defines adapter-family, ABI-range and compiler/profile matching; [cache registration](../ShaderCacheRegistrationAPI.md) retains precompiled-database selection. Query failure does not establish a default ABI range or a universally valid zeroed output.
+
+The offline compiler's [family enumeration](offline-compilation.md#id3d12compilerfactory-enumerateadapterfamilies), [ABI enumeration](offline-compilation.md#id3d12compilerfactory-enumerateadapterfamilyabiversions) and [compiler/profile version domains](offline-compilation.md#version-domains) define compiler-side target discovery. The installed-driver inclusive range above and the plugin's enumerated ABI set have distinct query contracts.
+
+[Registration target discovery](shader-cache-registration.md#target-discovery) defines the installer/application catalog's adapter compatibility records, application-dependent preference/profile behavior and distinct count/array protocols. That discovery is separate from this device payload and from the offline compiler's enumerated ABI set.
 
 <a id="d3d12_feature_data_barrier_layout"></a>
 

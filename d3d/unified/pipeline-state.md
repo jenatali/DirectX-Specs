@@ -224,6 +224,10 @@ A [`D3D12_PIPELINE_STATE_FLAGS`](https://learn.microsoft.com/en-us/windows/win32
 
 ## Pipeline-state streams
 
+For recorded offline-compilation inputs, the [database stream and root-signature substitutions](state-object-databases-and-identity.md#storage-only-forms) define storage/reconstruction independently of actual pipeline creation. A successful database store/find does not create a PSO or validate the input against driver capabilities; the complete stream and creation requirements here still apply.
+
+[ID3D12Compiler::CompilePipelineState](compiler-invocation-and-cache-output.md#id3d12compiler-compilepipelinestate) defines offline compilation and output storage. Its [input forms and target validation](compiler-invocation-and-cache-output.md#input-ownership) use serialized roots rather than live device roots and do not produce a device PSO. The ordinary creation and stream requirements here retain their own consuming-API scope.
+
 Subobjects are the constituent components of a pipeline state
 object. A pipeline state stream is constructed from a grouping (within a
 struct) of these subobjects, which from a technical perspective are
@@ -1343,29 +1347,9 @@ This method returns **E\_OUTOFMEMORY** if there is insufficient memory to create
 
 <a id="id3d12pipelinestate-getcachedblob"></a>
 
-### ID3D12PipelineState::GetCachedBlob
+### Legacy cached-blob retrieval
 
-#### Declaration
-
-```cpp
-HRESULT GetCachedBlob(ID3DBlob** ppBlob);
-```
-
-#### Behavior
-
-Gets the cached blob representing the pipeline state.
-
-The [cached-data contract](#cached-data) defines the output's scope and reuse requirements.
-
-#### Parameters
-
-`[out] ppBlob`
-
-After this method returns, points to the cached blob representing the pipeline state.
-
-#### Return values
-
-This method returns one of the [Direct3D 12 Return Codes](https://learn.microsoft.com/en-us/windows/desktop/direct3d12/d3d12-graphics-reference-returnvalues).
+The full [ID3D12PipelineState::GetCachedBlob contract](shader-delivery-and-caching.md#id3d12pipelinestate-getcachedblob) defines the supported legacy retrieval method, output ownership and results. The [cached-data contract](#cached-data) below retains cached-PSO input and creation requirements.
 
 <a id="id3d12graphicscommandlist-setpipelinestate"></a>
 
@@ -1446,11 +1430,13 @@ Graphics, compute and mesh shader sets are not additive pipeline bindings. The s
 
 ## Cached pipeline data
 
-`D3D12_CACHED_PIPELINE_STATE` is filled with the data retrieved from [ID3D12PipelineState::GetCachedBlob](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12pipelinestate-getcachedblob). This cached PSO contains data specific to the hardware, driver, and machine that it was retrieved from. The cached bytes are an optimization input; the complete creation description is still required. The rest of the data in the PSO needs to still be valid, and needs to match the cached PSO, otherwise E\_INVALIDARG might be returned.
+Per-PSO cached blobs and pipeline libraries are supported legacy caching mechanisms. Their complete [retrieval, storage and serialization contracts](shader-delivery-and-caching.md) remain distinct from the PSO creation inputs described here. Explicit offline driver/pipeline compilation and driver-cache control are the forward-facing directions; this classification does not remove or change the legacy callable contracts.
+
+`D3D12_CACHED_PIPELINE_STATE` is filled with the data retrieved from [ID3D12PipelineState::GetCachedBlob](shader-delivery-and-caching.md#id3d12pipelinestate-getcachedblob). This cached PSO contains data specific to the hardware, driver, and machine that it was retrieved from. The cached bytes are an optimization input; the complete creation description is still required. The rest of the data in the PSO needs to still be valid, and needs to match the cached PSO, otherwise E\_INVALIDARG might be returned.
 
 Driver/runtime version incompatibility can be reported as `D3D12_ERROR_DRIVER_VERSION_MISMATCH`; a different adapter can be reported as `D3D12_ERROR_ADAPTER_NOT_FOUND`.
 
-`CachedPSO.pCachedBlob == nullptr` with `CachedBlobSizeInBytes == 0` supplies no cache input. A cached blob is not a stand-alone serialized replacement for the shader/state description or a resource/descriptor binding. [Shader cache and pipeline-library management](../ShaderCache.md) has a separate callable/lifetime contract.
+`CachedPSO.pCachedBlob == nullptr` with `CachedBlobSizeInBytes == 0` supplies no cache input. A cached blob is not a stand-alone serialized replacement for the shader/state description or a resource/descriptor binding. [Shader cache and pipeline-library management](shader-delivery-and-caching.md) has a separate callable/lifetime contract.
 
 <a id="driver"></a>
 

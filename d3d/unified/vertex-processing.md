@@ -939,7 +939,7 @@ No guarantees or requirements are made by D3D12, however, as to the performance 
 
 ### Conversion and unbound inputs
 
-When the Input Assembler reads Elements of data from Buffers, it gets converted to the appropriate 32-bit data type for the [Format](formats.md#interpretation) interpretation specified. The conversion uses the [Data Conversion](../archive/D3D11_3_FunctionalSpec.htm#DataConversion) rules. If the source data contains 32-bit per-component float, UINT or SINT data, it is read without modifying the bits at all (no conversion).
+When the Input Assembler reads Elements of data from Buffers, it gets converted to the appropriate 32-bit data type for the [Format](formats.md#interpretation) interpretation specified. The conversion uses the [Data Conversion](numeric-and-data-rules.md#numeric-3-2) rules. If the source data contains 32-bit per-component float, UINT or SINT data, it is read without modifying the bits at all (no conversion).
 
 If a Vertex Buffer or Index Buffer is read by the Input Assembler, but the slot being read has no Buffer bound, the result of the read is 0 for all expected components. Even though there is format information available via the input layout, defaults are not applied to missing channels for this case.
 

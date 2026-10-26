@@ -2482,18 +2482,9 @@ The debug layer validates the following during `Barrier` calls:
 
 <a id="debug-queue-assert-access"></a>
 
-#### ID3D12DebugCommandQueue1::AssertResourceAccess
+#### Queue access assertions
 
-##### Declaration
-
-```cpp
-void AssertResourceAccess(
-    ID3D12Resource* pResource,
-    UINT Subresource,
-    D3D12_BARRIER_ACCESS Access);
-```
-
-##### Behavior
+The full [ID3D12DebugCommandQueue1::AssertResourceAccess contract](diagnostics.md#id3d12debugcommandqueue1-assertresourceaccess) defines its declaration, parameters and results. The synchronization-specific validation expectations follow; this assertion is not a barrier that changes application resource access or layout.
 
 Triggers a debug layer error if the given resource does not support the asserted access at the moment the `AssertResourceAccess` begins execution on the command queue GPU timeline.
 
@@ -2501,24 +2492,11 @@ Also tracks the resource as in-use by the command queue until the `AssertResourc
 
 Access validation currently considers only texture barrier layout (if `pResource` is a texture) and resource creation flags. Validation related to missing synchronization and/or cache flush is not implemented.
 
-##### Parameters and results
-
-`pResource` is the resource being asserted and `Subresource` identifies its subresource. The final parameter supplies the asserted access or texture layout, as declared. The method returns no value and performs diagnostic assertions, not a barrier that changes application resource access or layout.
-
 <a id="debug-queue-assert-layout"></a>
 
-#### ID3D12DebugCommandQueue1::AssertTextureLayout
+#### Queue layout assertions
 
-##### Declaration
-
-```cpp
-void AssertTextureLayout(
-    ID3D12Resource* pResource,
-    UINT Subresource,
-    D3D12_BARRIER_LAYOUT Layout);
-```
-
-##### Behavior
+The full [ID3D12DebugCommandQueue1::AssertTextureLayout contract](diagnostics.md#id3d12debugcommandqueue1-asserttexturelayout) defines its declaration, parameters and results. The synchronization-specific validation expectations follow; this assertion is not a barrier that changes application resource access or layout.
 
 Triggers a debug layer error if the given texture resource layout does not match the asserted layout at the moment the `AssertTextureLayout` begins execution on the command queue GPU timeline.
 
@@ -2526,24 +2504,11 @@ Also tracks the resource as in-use by the command queue until the `AssertTexture
 
 Buffers have no layout, therefore `AssertTextureLayout` does nothing when `pResource` is a buffer resource.
 
-##### Parameters and results
-
-`pResource` is the resource being asserted and `Subresource` identifies its subresource. The final parameter supplies the asserted access or texture layout, as declared. The method returns no value and performs diagnostic assertions, not a barrier that changes application resource access or layout.
-
 <a id="debug-list-assert-access"></a>
 
-#### ID3D12DebugCommandList3::AssertResourceAccess
+#### Command-list access assertions
 
-##### Declaration
-
-```cpp
-void AssertResourceAccess(
-    ID3D12Resource* pResource,
-    UINT Subresource,
-    D3D12_BARRIER_ACCESS Access);
-```
-
-##### Behavior
+The full [ID3D12DebugCommandList3::AssertResourceAccess contract](diagnostics.md#id3d12debugcommandlist3-assertresourceaccess) defines its declaration, parameters and results. The synchronization-specific validation expectations follow; this assertion is not a barrier that changes application resource access or layout.
 
 Triggers a debug layer error if the given resource does not support the asserted access at the assertion's recorded position in the command stream, reconciling an unknown initial assumption when necessary.
 
@@ -2551,31 +2516,14 @@ Also tracks the resource as in-use by the command queue until the command list r
 
 Access validation currently considers only texture barrier layout (if `pResource` is a texture) and resource creation flags. Validation related to missing synchronization and/or cache flush is not implemented.
 
-##### Parameters and results
-
-`pResource` is the resource being asserted and `Subresource` identifies its subresource. The final parameter supplies the asserted access or texture layout, as declared. The method returns no value and performs diagnostic assertions, not a barrier that changes application resource access or layout.
-
 <a id="debug-list-assert-layout"></a>
 
-#### ID3D12DebugCommandList3::AssertTextureLayout
+#### Command-list layout assertions
 
-##### Declaration
-
-```cpp
-void AssertTextureLayout(
-    ID3D12Resource* pResource,
-    UINT Subresource,
-    D3D12_BARRIER_LAYOUT Layout);
-```
-
-##### Behavior
+The full [ID3D12DebugCommandList3::AssertTextureLayout contract](diagnostics.md#id3d12debugcommandlist3-asserttexturelayout) defines its declaration, parameters and results. The synchronization-specific validation expectations follow; this assertion is not a barrier that changes application resource access or layout.
 
 Triggers a debug layer error if the given texture resource layout does not match the asserted layout at the assertion's recorded position in the command stream, reconciling an unknown initial assumption when necessary.
 
 Also tracks the resource as in-use by the command queue until the command list recording has completed execution on the command queue GPU timeline. Attempts to evict or destroy an in-use resource produces a debug layer error.
 
 Buffers have no layout, therefore `AssertTextureLayout` does nothing when `pResource` is a buffer resource.
-
-##### Parameters and results
-
-`pResource` is the resource being asserted and `Subresource` identifies its subresource. The final parameter supplies the asserted access or texture layout, as declared. The method returns no value and performs diagnostic assertions, not a barrier that changes application resource access or layout.

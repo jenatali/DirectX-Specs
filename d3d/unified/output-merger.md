@@ -54,7 +54,7 @@ such as clipping, depth bias, or clamping that occurs to depth prior to input to
 ### Depth clamp
 
 Depth values that reach the Output Merger, whether coming from interpolation or from Pixel Shader output (replacing the interpolated z),
-are always clamped: `z = min(max(Viewport.MinDepth,Viewport.MaxDepth), max(min(Viewport.MinDepth,Viewport.MaxDepth),z))` following the [Floating Point Rules](../archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules) for
+are always clamped: `z = min(max(Viewport.MinDepth,Viewport.MaxDepth), max(min(Viewport.MinDepth,Viewport.MaxDepth),z))` following the [Floating Point Rules](numeric-and-data-rules.md#numeric-3-1) for
 min/max.  The MinDepth and MaxDepth values are defined by the [Viewport](rasterization.md#viewport-transform).
 
 <a id="depth-comparison"></a>
@@ -296,7 +296,7 @@ The [format conversion rules](formats.md#modifiers) define sRGB decoding and enc
 ### Blending precision
 
 All Output Merger math/blending operations with floating point RenderTarget(s) (regardless of format size)
-must honor the [Floating Point Rules](../archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules), although
+must honor the [Floating Point Rules](numeric-and-data-rules.md#numeric-3-1), although
 operations are considered to be "fused", and reordering is permitted, outside of application control.
 
 NaNs and signed zeros must be propagated by blending hardware for all cases (including 0.0 blend weights).

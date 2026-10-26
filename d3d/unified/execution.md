@@ -140,7 +140,7 @@ Returns `S_OK` if successful; otherwise, returns one of the following values:
 
 - `DXGI_ERROR_DEVICE_REMOVED`: A device-removing driver error was stored as the command-list error.
 
-For a driver-reported device-removal failure, the application can query `ID3D12Device::GetDeviceRemovedReason` for the device's removal reason.
+For a driver-reported device-removal failure, the application can query [ID3D12Device::GetDeviceRemovedReason](diagnostics.md#id3d12device-getdeviceremovedreason) for the device's removal reason.
 
 #### Runtime validation
 
@@ -290,7 +290,7 @@ list.
 
 A successful command-list Reset starts a new recording, but errors reported through the command-list error callback while initializing that recording are stored for Close to report. Reset's HRESULT does not replace the requirement to check Close.
 
-Driver-reported errors are translated before the resulting command-list error is stored. A driver-reported `E_OUTOFMEMORY` remains `E_OUTOFMEMORY` unless the device has already been removed. Driver-reported device removal or application error removes the device and is translated to `DXGI_ERROR_DEVICE_REMOVED`; the more specific device reason is available from `GetDeviceRemovedReason`. If an earlier command-list error has already been recorded, it remains the error returned by Close and later Reset. Device removal does not replace that earlier stored error.
+Driver-reported errors are translated before the resulting command-list error is stored. A driver-reported `E_OUTOFMEMORY` remains `E_OUTOFMEMORY` unless the device has already been removed. Driver-reported device removal or application error removes the device and is translated to `DXGI_ERROR_DEVICE_REMOVED`; the more specific device reason is available from [GetDeviceRemovedReason](diagnostics.md#id3d12device-getdeviceremovedreason). If an earlier command-list error has already been recorded, it remains the error returned by Close and later Reset. Device removal does not replace that earlier stored error.
 
 <a id="submission"></a>
 
@@ -484,6 +484,8 @@ Fence-barrier use requires `D3D12_FENCE_FLAG_ALLOW_COMMAND_LIST_BARRIERS` explic
 `D3D12_FENCE_FLAG_SHARED_CROSS_ADAPTER` requires `D3D12_FENCE_FLAG_SHARED`. `D3D12_FENCE_FLAG_NON_MONITORED` creation requires both sharing flags and adapter support for non-monitored fences. Unsupported flag combinations fail with `E_INVALIDARG`.
 
 Adapter fence support is described by [`DXGI_ADAPTER_DESC3::Flags`](https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_6/ns-dxgi1_6-dxgi_adapter_desc3), including `DXGI_ADAPTER_FLAG3_SUPPORT_MONITORED_FENCES` and `DXGI_ADAPTER_FLAG3_SUPPORT_NON_MONITORED_FENCES`. When `IDXGIAdapter4` is available, obtain the description through [`IDXGIAdapter4::GetDesc3`](https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_6/nf-dxgi1_6-idxgiadapter4-getdesc3).
+
+The complete [shared-fence export/open and handle contract](sharing-and-interoperability.md#sharing-synchronization) defines how participating devices and processes obtain the same fence. Exporting or opening a handle does not signal or wait for the fence, supply command-list-barrier eligibility or relax these creation and CPU-observation requirements.
 
 Non-monitored fences are used for GPU-side synchronization; they do not provide the CPU progress-observation operations of monitored fences. `ID3D12Fence::Signal` and `ID3D12Fence::SetEventOnCompletion` reject a non-monitored fence with `E_INVALIDARG`. `GetCompletedValue` is invalid for a non-monitored fence and returns `UINT64_MAX`; that value is not a completed-work measurement. Multi-fence CPU notification/wait also requires CPU-wait-capable fences, not non-monitored fences. `GetCreationFlags` is a property query, not a progress query, and is not prohibited by this restriction. Non-monitored instances do not report `D3D12_FENCE_FLAG_ALLOW_COMMAND_LIST_BARRIERS` and are not eligible for command-list fence barriers.
 
@@ -797,7 +799,7 @@ Unrecognized `Flags` bits return `E_INVALIDARG`. Storage allocation can fail wit
 
 ### Completion, device removal, and lifetime
 
-`GetDeviceRemovedReason` gets the reason that the device was removed, or `S_OK` if the device isn't removed. To be called back when a device is removed, consider using [ID3D12Fence::SetEventOnCompletion](#id3d12fenceseteventoncompletion) with a value of `UINT64_MAX`. That's because device removal causes CPU-wait-capable fences to be signaled to that value (which also implies completing all events waited on, because their thresholds are at most `UINT64_MAX`).
+The full [`ID3D12Device::GetDeviceRemovedReason` contract](diagnostics.md#id3d12device-getdeviceremovedreason) defines device-removal status. To be called back when a device is removed, consider using [ID3D12Fence::SetEventOnCompletion](#id3d12fenceseteventoncompletion) with a value of `UINT64_MAX`. That's because device removal causes CPU-wait-capable fences to be signaled to that value (which also implies completing all events waited on, because their thresholds are at most `UINT64_MAX`).
 
 An event becoming signaled or a fence reading `UINT64_MAX` is not by itself proof of successful GPU execution. Check device status rather than interpreting removal-induced notification as normally completed rendering or valid output data.
 

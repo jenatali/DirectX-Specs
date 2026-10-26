@@ -6,6 +6,8 @@ A resource's format describes its storage representation. A resource view select
 
 ## Resource formats and view interpretation
 
+The [shared numeric representations and conversion algorithms](numeric-and-data-rules.md#numeric-3-2) define SNORM/UNORM/sRGB, floating-point and integer-width conversions, with the [round-trip guarantee and its exceptions](numeric-and-data-rules.md#numeric-19-1-2). The [RGB9E5](numeric-and-data-rules.md#numeric-19-3-2) and [R11G11B10](numeric-and-data-rules.md#numeric-19-3-3) numeric layouts/conversions remain distinct from this chapter's format-use capabilities, casting and component-default rules.
+
 Formats describe element data format layout and interpretations.  A large number of data
 layouts and interpretations are available.  In addition, there is facility to view the same data with different interpretations (e.g. raw bits vs. normalized integer),
  or to represent data in a general way (just the bit layouts) without committing to a particular interpretation of the data (e.g. normalized) until as late as possible (e.g. a Shader using the data).
@@ -297,27 +299,27 @@ adapt the overall element endianness to match the host CPU.
 
 #### `_SNORM`
 
-Data in channels appearing on the left of _SNORM in the format name are interpreted in the resource as signed integers, and in the Shader as signed normalized float values in the range [-1,1].  Conversions are defined here: [FLOAT -> SNORM](../archive/D3D11_3_FunctionalSpec.htm#FLOATtoSNORM) [SNORM-> FLOAT](../archive/D3D11_3_FunctionalSpec.htm#SNORMtoFLOAT)
+Data in channels appearing on the left of _SNORM in the format name are interpreted in the resource as signed integers, and in the Shader as signed normalized float values in the range [-1,1].  Conversions are defined here: [FLOAT -> SNORM](numeric-and-data-rules.md#numeric-3-2-3-4) [SNORM-> FLOAT](numeric-and-data-rules.md#numeric-3-2-3-3)
 
 #### `_UNORM`
 
-Data in channels appearing on the left of _UNORM in the format name are interpreted in the resource as unsigned integers, and in the Shader as unsigned normalized float values, in the range [0,1]. Conversions are defined here: [FLOAT -> UNORM](../archive/D3D11_3_FunctionalSpec.htm#FLOATtoUNORM) [UNORM -> FLOAT](../archive/D3D11_3_FunctionalSpec.htm#UNORMtoFLOAT)
+Data in channels appearing on the left of _UNORM in the format name are interpreted in the resource as unsigned integers, and in the Shader as unsigned normalized float values, in the range [0,1]. Conversions are defined here: [FLOAT -> UNORM](numeric-and-data-rules.md#numeric-3-2-3-6) [UNORM -> FLOAT](numeric-and-data-rules.md#numeric-3-2-3-5)
 
 #### `_SINT`
 
-Data in channels appearing to the left of _SINT in the format name are interpreted both in the resource and in the Shader as signed integers.  Conversions are defined here: [SINT -> SINT (With More Bits)](../archive/D3D11_3_FunctionalSpec.htm#SINTtoBIGGER_SINT) [SINT or UINT -> SINT or UINT (With Fewer or Equal Bits)](../archive/D3D11_3_FunctionalSpec.htm#SINTorUINTtoSMALLER_SINTorUINT)
+Data in channels appearing to the left of _SINT in the format name are interpreted both in the resource and in the Shader as signed integers.  Conversions are defined here: [SINT -> SINT (With More Bits)](numeric-and-data-rules.md#numeric-3-2-3-9) [SINT or UINT -> SINT or UINT (With Fewer or Equal Bits)](numeric-and-data-rules.md#numeric-3-2-3-13)
 
 #### `_UINT`
 
-Data in channels appearing to the left of _UINT in the format name are interpreted in the resource as unsigned integers, and also in the Shader as unsigned integers.  Conversions are defined here: [UINT -> UINT (With More Bits)](../archive/D3D11_3_FunctionalSpec.htm#UINTtoBIGGER_UINT) [SINT or UINT -> SINT or UINT (With Fewer or Equal Bits)](../archive/D3D11_3_FunctionalSpec.htm#SINTorUINTtoSMALLER_SINTorUINT)
+Data in channels appearing to the left of _UINT in the format name are interpreted in the resource as unsigned integers, and also in the Shader as unsigned integers.  Conversions are defined here: [UINT -> UINT (With More Bits)](numeric-and-data-rules.md#numeric-3-2-3-12) [SINT or UINT -> SINT or UINT (With Fewer or Equal Bits)](numeric-and-data-rules.md#numeric-3-2-3-13)
 
 #### `_FLOAT`
 
-Data in channels appearing to the left of _FLOAT in the format name are interpreted in the resource as floating point values (bit depth specified by format), and in the Shader as floating point values, with appropriate conversions either way.  Conversions are defined here: [Floating Point Conversion](../archive/D3D11_3_FunctionalSpec.htm#FloatConversion)
+Data in channels appearing to the left of _FLOAT in the format name are interpreted in the resource as floating point values (bit depth specified by format), and in the Shader as floating point values, with appropriate conversions either way.  Conversions are defined here: [Floating Point Conversion](numeric-and-data-rules.md#numeric-3-2-2)
 
 #### `_SRGB`
 
-R, G and B channels in format store sRGB-encoded nonlinear data.  Conversion to/from linear values is required (pre-filtering) when reading/writing data to those channels.  Conversions are defined here: [SRGB -> FLOAT](../archive/D3D11_3_FunctionalSpec.htm#SRGBtoFLOAT) [FLOAT -> SRGB](../archive/D3D11_3_FunctionalSpec.htm#FLOATtoSRGB) If a format with _SRGB has an A channel, the A channel is linear. This modifier is ignored for display scan-out (see [SRGB Display Scan-Out](../archive/D3D11_3_FunctionalSpec.htm#SRGBDisplayScanOut)).
+R, G and B channels in format store sRGB-encoded nonlinear data.  Conversion to/from linear values is required (pre-filtering) when reading/writing data to those channels.  Conversions are defined here: [SRGB -> FLOAT](numeric-and-data-rules.md#numeric-3-2-3-7) [FLOAT -> SRGB](numeric-and-data-rules.md#numeric-3-2-3-8) If a format with _SRGB has an A channel, the A channel is linear. This modifier is ignored for display scan-out (see [SRGB Display Scan-Out](../archive/D3D11_3_FunctionalSpec.htm#SRGBDisplayScanOut)).
 
 #### `_TYPELESS`
 

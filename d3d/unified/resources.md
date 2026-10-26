@@ -782,7 +782,7 @@ Behavior for SRV reads that involve non-mapped tiles depends on the level of har
 for a breakdown of requirements. The following summarizes Tier 2 and higher read behavior.
 
 Consider a texture filter operation that reads from a set of texels in an SRV. Texels that fall on non-mapped tiles contribute 0 in all non-missing components of the format, and the
-[default for missing components](../archive/D3D11_3_FunctionalSpec.htm#DefaultsForMissingComponents)(19.1.3.3), into the overall filter operation
+[default for missing components](formats.md#missing-components)(19.1.3.3), into the overall filter operation
 alongside contributions from mapped texels. The texels are all weighted and combined together independent of whether the data came from mapped or non-mapped tiles.
 
 **Compatibility:** Some first generation Tier 2 level hardware does not meet this spec requirement and returns the 0 with defaults described above as the overall filter result if ANY texels (with nonzero weight) fall on non-mapped tiles.
@@ -796,7 +796,7 @@ for a breakdown of requirements.
 For accesses to unmapped tiles on Tier 2 and higher (subject to the cache qualification below):
 
 Shader operations that read from a non-mapped tile in a UAV return 0 in all non-missing components of the format, and the
-[default for missing components](../archive/D3D11_3_FunctionalSpec.htm#DefaultsForMissingComponents)(19.1.3.3).
+[default for missing components](formats.md#missing-components)(19.1.3.3).
 
 Shader operations that attempt to write to a non-mapped tile cause nothing to be written to the non-mapped area (while writes to mapped area
 proceed). This ideal definition for write handling is not required by Tier 2 - writes to non-mapped tiles may end up in a cache that subsequent reads could pick up.
@@ -820,7 +820,7 @@ On all implementations it is valid for different RTVs (and DSV) bound simultaneo
 
 For accesses to unmapped tiles on Tier 2 and higher (subject to the cache qualification below):
 
-Reads from unmapped tiles in RenderTargetViews return 0 in all non-missing components of the format, and the [default for missing components](../archive/D3D11_3_FunctionalSpec.htm#DefaultsForMissingComponents)(19.1.3.3).
+Reads from unmapped tiles in RenderTargetViews return 0 in all non-missing components of the format, and the [default for missing components](formats.md#missing-components)(19.1.3.3).
 Writes to unmapped tiles in RenderTargetViews are dropped. This ideal definition for write handling is not required - writes to non-mapped tiles may end up in a cache that subsequent reads could pick up.
 
 [Shader mapping-status feedback](common-shader-internals.md#mapping-feedback) defines the opaque access status, Fully Mapped Check (including zero-weight texels and missing components), and per-sample MinLOD clamp. [Min/max reduction filtering](common-shader-internals.md#minmax-filtering) owns the reduction rules. [Sampler feedback](common-shader-internals.md#sampler-feedback) records sampling usage and is not a tile-mapping operation.
@@ -2521,7 +2521,7 @@ No options are specified.
 
 ### D3D12_HEAP_FLAG_SHARED
 
-The heap is shared. Refer to [Shared Heaps](https://learn.microsoft.com/en-us/windows/desktop/direct3d12/shared-heaps).
+The heap is shared. Refer to [Shared Heaps](sharing-and-interoperability.md#shared-heaps).
 
 ### D3D12_HEAP_FLAG_DENY_BUFFERS
 
@@ -2533,7 +2533,7 @@ The heap is allowed to contain swap-chain surfaces.
 
 ### D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER
 
-The heap is allowed to share resources across adapters. Refer to [Shared Heaps](https://learn.microsoft.com/en-us/windows/desktop/direct3d12/shared-heaps). A protected session cannot be mixed with resources that are shared across adapters.
+The heap is allowed to share resources across adapters. Refer to [Shared Heaps](sharing-and-interoperability.md#cross-adapter-heaps). A protected session cannot be mixed with resources that are shared across adapters.
 
 ### D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES
 
@@ -2557,7 +2557,7 @@ Ensures that atomic operations will be atomic on this heap's memory, according t
 
 Creating a heap with this flag will fail under either of these conditions:
 
-- The heap type is `D3D12_HEAP_TYPE_DEFAULT`, and the heap can be visible on multiple nodes, but the device does *not* support [`D3D12_CROSS_NODE_SHARING_TIER_3`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_cross_node_sharing_tier).
+- The heap type is `D3D12_HEAP_TYPE_DEFAULT`, and the heap can be visible on multiple nodes, but the device does *not* support [`D3D12_CROSS_NODE_SHARING_TIER_3`](sharing-and-interoperability.md#cross-node-sharing-tier).
 - The heap is CPU-visible, but the heap type is *not* `D3D12_HEAP_TYPE_CUSTOM`.
 
 Note that heaps with this flag might be a limited resource on some systems.
@@ -2607,7 +2607,7 @@ The following aliases exist, so be careful when doing bit-manipulations:
 - `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES` = `D3D12_HEAP_FLAG_DENY_BUFFERS` | `D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES`
 - `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` = `D3D12_HEAP_FLAG_DENY_BUFFERS` | `D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES`
 
-Heaps with `D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER` must leave `D3D12_HEAP_FLAG_DENY_BUFFERS`, `D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES` and `D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES` clear. This category-mask exception does not remove the [cross-adapter resource restrictions](https://learn.microsoft.com/en-us/windows/win32/direct3d12/shared-heaps).
+Heaps with `D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER` must leave `D3D12_HEAP_FLAG_DENY_BUFFERS`, `D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES` and `D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES` clear. This category-mask exception does not remove the [cross-adapter resource restrictions](sharing-and-interoperability.md#cross-adapter-heaps).
 
 ### Displayable heaps
 
@@ -3167,6 +3167,16 @@ The legacy creation methods specify an initial state valid for the resource desc
 Writable multisampled UAV resources also require `D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET`; `D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL` cannot be combined with unordered access.
 
 For these creation methods, a null output pointer selects parameter validation without object creation. `S_FALSE` does not establish successful backing allocation or support for the requested `riid`/`riidResource`. `CreatePlacedResource` has the same validation-only contract.
+
+<a id="shared-cross-adapter-creation"></a>
+
+### Committed cross-adapter creation
+
+Committed-resource creation with `D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER` requires `D3D12_RESOURCE_DIMENSION_TEXTURE2D` and `D3D12_TEXTURE_LAYOUT_ROW_MAJOR`. The format must report `D3D12_FORMAT_SUPPORT1_DISPLAY` or `D3D12_FORMAT_SUPPORT2_DISPLAYABLE`, and the selected row-major layout must also support display through one of those support bits. A description that fails these conditions is invalid and returns `E_INVALIDARG`.
+
+Use [CreatePlacedResource](#create-placed-resource) on a shared cross-adapter heap for other supported formats or layouts, subject to the [complete cross-adapter sharing restrictions](sharing-and-interoperability.md#cross-adapter-heaps), [resource flags](#resource-flags) and [texture-layout requirements](#texture-layout). The [format-support query](formats.md#d3d12-feature-data-format-support) defines the format result bits.
+
+This committed-creation condition does not settle the separate [DISPLAYABLE query's operational domain](devices-and-capabilities.md#d3d12_feature_data_displayable). [Shared backing and handles](sharing-and-interoperability.md#shared-backing) remain separate from resource creation, synchronization and lifetime.
 
 <a id="create-heap"></a>
 

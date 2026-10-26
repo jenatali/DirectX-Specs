@@ -897,7 +897,7 @@ The driver or hardware is responsible for clamping rects to the surface extents.
 
 The floating point values passed in through the DDI must be converted to the
 fully qualified format type of the View desired to be cleared. The
-standard [type conversion rules](../archive/D3D11_3_FunctionalSpec.htm#3.2%20Data%20Conversion) indicate how to convert
+standard [type conversion rules](numeric-and-data-rules.md#numeric-3-2) indicate how to convert
 to most values; but these conversion rules do not explicitly handle the case where the
 destination fixed point format contains more integer bits than the floating point format
 mantissa. When converting these floating point values to a format such as

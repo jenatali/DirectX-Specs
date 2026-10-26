@@ -308,6 +308,8 @@ without risk of crashing.
 
 ## Root arguments and signatures
 
+Recorded database inputs use the [serialized root-signature descriptors and reconstruction rules](state-object-databases-and-identity.md#storage-only-forms). Storing a description does not persist a live `ID3D12RootSignature` pointer. The serialization, creation and binding semantics defined here remain applicable when restoring those inputs.
+
 The *root arguments* are an application defined data structure used by
 shaders to locate the resources they need access. These arguments
 exist as a binding space on a command list for the collection of
@@ -2440,6 +2442,10 @@ HRESULT WINAPI D3D12SerializeVersionedRootSignature(
 #### Behavior
 
 Serializes a root signature of any version that can be passed to [ID3D12Device::CreateRootSignature](https://learn.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12device-createrootsignature).
+
+The separate compiler-host export [D3D12CompilerSerializeVersionedRootSignature](offline-compilation.md#d3d12compilerserializeversionedrootsignature) defines offline serialization and its compiler-host validation context. It is not an alias of this runtime export; serialization alone does not establish device creation support.
+
+[Offline compilation inputs](compiler-invocation-and-cache-output.md#input-ownership) define how serialized roots and shader-embedded roots are consumed without live device root-signature objects. Root contents, shader compatibility and ordinary device root creation remain subject to this chapter.
 
 #### Parameters
 

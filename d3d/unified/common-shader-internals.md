@@ -34,7 +34,7 @@ A shader program describes the work of one invocation. Its stage supplies inputs
 
 Shader Models 4.0, 4.1 and 5.0 describe the inherited register/instruction model below. The D3D12 paths described here use SM5.0/5.1 DXBC shader assets and supported SM6.x DXIL shaders. SM5.1 adds resource-range flexibility; existing SM5.0 shaders can use root signatures. Historical SM4.x instruction availability is not a D3D12 profile-acceptance rule. `D3D12_FEATURE_SHADER_MODEL` reports the supported shader model. Shader model, DXIL version, validator version and optional device capabilities are distinct conditions.
 
-The main body defines common operation-family and sampling behavior. Exact token/container encodings, declarations and exhaustive per-opcode/per-intrinsic entries are the DXBC and DXIL supporting references. The [numeric definitions](../archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules), [conversion algorithms](../archive/D3D11_3_FunctionalSpec.htm#DataConversion) and [format interpretation](formats.md#interpretation) remain separately defined; this chapter does not replace their complete references.
+The main body defines common operation-family and sampling behavior. Exact token/container encodings, declarations and exhaustive per-opcode/per-intrinsic entries are the DXBC and DXIL supporting references. The [numeric definitions](numeric-and-data-rules.md#numeric-3-1), [conversion algorithms](numeric-and-data-rules.md#numeric-3-2) and [format interpretation](formats.md#interpretation) remain separately defined; this chapter does not replace their complete references.
 
 <a id="archive-7-1"></a>
 
@@ -84,6 +84,18 @@ To provide a run-time stack, a program allocates a temporary array of a fixed si
 e.g., skip calls if the stack push would exceed the array bounds.
 
 There is no limit on the total number of times temporary registers (the same one or different ones) that can appear in a single instruction or in a shader.
+
+<a id="dxbc-double-packing"></a>
+
+### Double-precision DXBC values
+
+The following packing, swizzle and write-mask rules apply to the DXBC register model, not to scalar DXIL SSA values. The [shared double-precision numeric contract](numeric-and-data-rules.md#numeric-3-1-4) defines arithmetic and availability.
+
+An exception to the 4-vector register convention exists for double-precision floating-point instructions, which operate on pairs of doubles.
+Double-precision floating-point values are in IEEE 754R format. One double is stored in .xy with the least significant 32 bits in x, and the most significant 32 bits in y.
+Similarly the second double is stored in .zw with the least significant 32 bits in z, and the most significant 32 bits in w.
+
+The permissible swizzles for double operations are .xyzw, .xyxy, .zwxy, .zwzw. The permissible write masks for double operations are .xy, .zw, and .xyzw.
 
 <a id="archive-7-4"></a>
 
@@ -236,7 +248,7 @@ This instruction assumes that an unsigned 32-bit integer value exists in r2.x, a
 
 ### Floating Point Instructions
 
-Floating point instructions must follow the Direct3D 12 [Floating Point Rules](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules).
+Floating point instructions must follow the Direct3D 12 [Floating Point Rules](numeric-and-data-rules.md#numeric-3-1).
 
 A listing of all floating point instructions can be found [here](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FloatingPointInstructions).
 
@@ -384,7 +396,7 @@ The "Texture Coordinate Interpretation" diagram below describes how these interp
 for point and linear sampling. The diagram does not illustrate address wrapping, which
 occurs after the shown equations for computing texel locations. The addressing math shown in this diagram
 is only a general guideline, and exact definition of texel selection arithmetic is provided in the [Texture Sampling](#archive-7-18) section,
-including the role of [Fixed Point](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FLOATtoFIXED) snapping of precision in the addressing process.
+including the role of [Fixed Point](numeric-and-data-rules.md#numeric-3-2-4-1) snapping of precision in the addressing process.
 
 ![](../archive/images/d3d11/D3D11_3_TexCoords.png)
 
@@ -700,8 +712,8 @@ Point sampling selects the "nearest" texel based on the proximity of texel cente
 
 - Given a 1D texture coordinate in normalized space U, assumed to be any float32 value.
 - U is scaled by the Texture1D size. Call this scaledU
-- scaledU is converted to at least 16.8 [Fixed Point](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FLOATtoFIXED). Call this fxpScaledU.
-- The integer part of fxpScaledU is the chosen texel. Call this t. Note that the conversion to [Fixed Point](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FLOATtoFIXED) basically accomplished: t = floor(scaledU).
+- scaledU is converted to at least 16.8 [Fixed Point](numeric-and-data-rules.md#numeric-3-2-4-1). Call this fxpScaledU.
+- The integer part of fxpScaledU is the chosen texel. Call this t. Note that the conversion to [Fixed Point](numeric-and-data-rules.md#numeric-3-2-4-1) basically accomplished: t = floor(scaledU).
 - If t is outside [0...numTexels-1] range, D3D12_SAMPLER_DESC's AddressU mode is [applied](#archive-7-18-9).
 
 For Texture2D and Texture3D Resources, the same rules apply independently on the other dimensions.
@@ -734,10 +746,10 @@ two texels to the sample location and weights the texels based on the proximity 
 
 - Given a 1D texture coordinate in normalized space U, assumed to be any float32 value.
 - U is scaled by the Texture1D size, and 0.5f is subtracted. Call this scaledU.
-- scaledU is converted to at least 16.8 [Fixed Point](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FLOATtoFIXED). Call this fxpScaledU.
-- The integer part of fxpScaledU is the chosen left texel. Call this tFloorU. Note that the conversion to [Fixed Point](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FLOATtoFIXED) basically accomplished: tFloorU = floor(scaledU).
+- scaledU is converted to at least 16.8 [Fixed Point](numeric-and-data-rules.md#numeric-3-2-4-1). Call this fxpScaledU.
+- The integer part of fxpScaledU is the chosen left texel. Call this tFloorU. Note that the conversion to [Fixed Point](numeric-and-data-rules.md#numeric-3-2-4-1) basically accomplished: tFloorU = floor(scaledU).
 - The right texel, tCeilU is simply tFloorU + 1.
-- The weight value wCeilU is assigned the fractional part of fxpScaledU, [converted to float](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FIXEDtoFLOAT) (although using less than full float32 precision for computing and processing wCeilU and wFloorU is permitted).
+- The weight value wCeilU is assigned the fractional part of fxpScaledU, [converted to float](numeric-and-data-rules.md#numeric-3-2-4-2) (although using less than full float32 precision for computing and processing wCeilU and wFloorU is permitted).
 - The weight value wFloorU is 1.0f - wCeilU.
 - If tFloorU or tCeilU are out of range of the texture, D3D12_SAMPLER_DESC's AddressU mode is [applied](#archive-7-18-9) to each individually.
 - Since more than one texel is chosen, the single sample result is computed as:
@@ -1076,7 +1088,7 @@ This section describes how LOD is computed as part of sample\* instructions invo
   ```
 
   The ordering of min/max guarantees that if MinLOD > MaxLOD, then MinLOD takes precedence. These min and max operations follow the
-  [Floating Point Rules](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules), so NaN never gets propagated. A sampler state that specifies NaN for MinLOD or MaxLOD is invalid.
+  [Floating Point Rules](numeric-and-data-rules.md#numeric-3-1), so NaN never gets propagated. A sampler state that specifies NaN for MinLOD or MaxLOD is invalid.
 
   The selection of minification vs magnification occurs after LOD clamping.
 
@@ -1976,7 +1988,7 @@ In mipmap selection, after conversion from float, at least 8-bits must represent
 8-bits must represent the fractional component of an LOD (2^8
 subdivisions).
 
-See the discussion in the [Fixed Point Integers](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FixedPointIntegers) section on how fixed point numbers should be defined
+See the discussion in the [Fixed Point Integers](numeric-and-data-rules.md#numeric-3-2-4) section on how fixed point numbers should be defined
 and how it relates to texture coordinate precision.
 
 <a id="archive-7-18-16-2"></a>
@@ -1985,7 +1997,7 @@ and how it relates to texture coordinate precision.
 
 All of the texture filtering operations in Direct3D 12, when being performed
 on floating point formats (regardless of format width), are required to
-follow the Direct3D 12 [Floating Point Rules](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules), with one exception: When a filter
+follow the Direct3D 12 [Floating Point Rules](numeric-and-data-rules.md#numeric-3-1), with one exception: When a filter
 weight of 0.0 is encountered, NaN's or signed zeros may or may not be propagated from the source texture.
 
 Texture filtering operations performed on fixed point formats must be done with at least as much precision
@@ -2016,13 +2028,13 @@ Sampling through a null SRV descriptor returns zero in all components. An uninit
 
 Minimum-precision declarations permit an implementation to use higher precision; they do not request a particular physical register allocation. D3D12 reports minimum-precision support through `D3D12_FEATURE_DATA_D3D12_OPTIONS::MinPrecisionSupport`. Native 16-bit operations use their separate SM6.2-and-later type mode and `OPTIONS4::Native16BitShaderOpsSupported` capability. Native 16-bit and minimum-precision operations are not interchangeable contracts.
 
-The following inherited precision levels describe the applicable SM4+ minimum-precision model, not D3D9/level-9 profiles. Complete instruction rounding, format conversion and numeric special cases remain in the [numeric primary definitions](../archive/D3D11_3_FunctionalSpec.htm#FloatingPointRules) and [conversion definitions](../archive/D3D11_3_FunctionalSpec.htm#DataConversion), together with the operation's supporting reference.
+The following inherited precision levels describe the applicable SM4+ minimum-precision model, not D3D9/level-9 profiles. Complete instruction rounding, format conversion and numeric special cases remain in the [numeric primary definitions](numeric-and-data-rules.md#numeric-3-1) and [conversion definitions](numeric-and-data-rules.md#numeric-3-2), together with the operation's supporting reference.
 
 <a id="archive-7-20-2"></a>
 
 ### Precision Levels
 
-Historical SM4/SM5 minimum-precision availability and representation are summarized below. “Optional” describes the historical shader profile, not a new D3D12 format-support query. Native float16 representation follows the [float16 numeric definition](../archive/D3D11_3_FunctionalSpec.htm#FP16).
+Historical SM4/SM5 minimum-precision availability and representation are summarized below. “Optional” describes the historical shader profile, not a new D3D12 format-support query. Native float16 representation follows the [float16 numeric definition](numeric-and-data-rules.md#numeric-3-1-5).
 
 <table border="1" frame="border" id="LowPrecisionTable">
 <tr>
