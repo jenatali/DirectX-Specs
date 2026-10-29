@@ -6,6 +6,8 @@ Device creation selects a minimum feature level. Feature levels group required f
 
 [Execution](execution.md#threading) defines common CPU threading and object-lifetime rules. [Resources](resources.md) defines heap placement and resource node masks. [Binding](binding.md#binding-capabilities) defines root-signature representation and version support. The capability catalog in this chapter identifies exact query payload owners without moving their feature semantics.
 
+Video interface discovery and the separate `ID3D12VideoDevice::CheckFeatureSupport` protocol are defined in [Video](video.md#video-device-model).
+
 <a id="identity"></a>
 
 ## Adapter identity and linked nodes
@@ -197,6 +199,8 @@ Refer to the [Example Code in the D3D12 Reference](https://learn.microsoft.com/e
 The ordinary entry point's singleton is per adapter LUID within the process. Independent devices created by a factory do not make all device objects for the same LUID identical. A removed singleton cannot be replaced through `D3D12CreateDevice` while references keep it alive. Releasing the singleton and its device children permits a subsequent creation; independent creation provides a separate configuration and recovery boundary.
 
 Historical context: driver-upgrade recovery also requires allowing the old user-mode driver and its dependent modules to unload. Sharing a singleton couples components' recovery to the lifetime of that singleton.
+
+[Runtime cache discovery](runtime-cache-discovery.md#effective-identity) defines effective identity and registered default-PSDB initialization for a newly initialized device. Its [absence/error and retained-state rules](runtime-cache-discovery.md#failure-and-lifetime) do not imply that returning an existing singleton repeats initialization or refreshes its cache.
 
 <a id="runtime-selection"></a>
 
@@ -573,6 +577,8 @@ HRESULT CreateDevice(IUnknown *adapter, D3D_FEATURE_LEVEL FeatureLevel,
 #### Behavior
 
 Creates a device under the independent-device and singleton-reuse policy selected by the `D3D12_DEVICE_FACTORY_FLAGS` flags set on this object.
+
+For a newly initialized device, [effective identity and runtime cache discovery](runtime-cache-discovery.md#effective-identity) use this factory's copied configuration. Returning an existing device follows the compatibility rules here, not a new identity/cache refresh operation.
 
 #### Parameters
 
@@ -1278,9 +1284,9 @@ The driver returns a value for MaximumDriverSupportedFeatureLevel which does not
 ### API-level and DDI-level reported capabilities
 The WriteBufferImmediateSupportFlags capability D3D12_COMMAND_LIST_SUPPORT_FLAG_BUNDLE is switched on at the API level for drivers which report D3D12DDI_COMMAND_QUEUE_FLAG_3D at the DDI level.
 
-Public UMD device creation and capability discovery use versioned adapter function tables. `D3D12DDI_ADAPTERFUNCS` includes private-device sizing, device creation, adapter close, supported-version discovery, capability queries, optional-table discovery, table filling and device destruction. The runtime supplies device-creation arguments containing runtime and driver handles, interface/runtime versions, callbacks and creation flags. `D3D12DDI_ADAPTERFUNCS_0109` selects the versioned creation entry with GPU virtual-address reservation ranges.
+[Runtime UMD initialization](driver-initialization.md) defines `OpenAdapter12`, exact shared DDI-version selection, compatible adapter tables, private-device storage, creation and cleanup, table population and callback ownership. The `_0109` creation type name is not its tail-field availability gate: [the reserved-range fields require the 0111 guarantee](driver-initialization.md#creation-tail).
 
-`PFND3D12DDI_GETCAPS` receives `D3D12DDIARG_GETCAPS`, whose `Type`, `pInfo`, `pData` and `DataSize` identify the DDI query and its buffers. A CPU `CheckFeatureSupport` call is not a one-to-one DDI dispatch. The runtime can cache, combine or translate driver reporting; the feature-level query and bundle write-immediate mapping are explicit examples.
+The [generic driver capability query](driver-initialization.md#capability-queries) defines `PFND3D12DDI_GETCAPS` and its query/buffer parameters. A CPU `CheckFeatureSupport` call is not a one-to-one DDI dispatch. The runtime can cache, combine or translate driver reporting; the feature-level query and bundle write-immediate mapping are explicit examples.
 
 <a id="selector-catalog"></a>
 
@@ -1838,6 +1844,8 @@ A pointer to a buffer containing the query output data.
 Type: **[SIZE_T](https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types)**
 
 The size of the buffer pointed to by *pQueryOutputData*, in bytes.
+
+Generic meta-command discovery, stage parameter reflection and instance use are defined in [Meta commands](meta-commands.md#meta-commands).
 
 <a id="d3d12_feature_data_protected_resource_session_type_count"></a>
 

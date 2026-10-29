@@ -38,9 +38,88 @@ Command queues can be created by calling [`ID3D12Device::CreateCommandQueue`](ht
 
 In general, DIRECT queues and command lists accept graphics, compute, and copy commands, COMPUTE queues and command lists accept compute and copy related commands, and COPY queues and command lists accept only copy commands.
 
+Video-decode recording, lifecycle, ordering and lifetime are defined in [Video](video.md#video-recording-lifetime), using the common queue/submission and completion contracts.
+
+The distinct video-process list/queue and processor route is defined in [Video processing](video.md#video-processing-model), using the common creation, submission, threading and completion contracts.
+
+The VIDEO_ENCODE [base list lifecycle and motion operations](video-motion-estimation.md#motion-recording) use these common creation, allocator-storage, threading, submission and completion contracts. The motion estimator's [cross-queue exclusion rule](video-motion-estimation.md#motion-driver-objects) is an additional object-specific requirement, not decoder recording serialization.
+
+Video [GPU extension initialization/execution](video-extension-commands.md#extension-recording) records into the selected compatible video list and follows these common submission/storage/lifetime contracts. The distinct [device extension method](video-extension-commands.md#videodevice2-executeextensioncommand) has a published completion-before-return contract; its parameter stages are not GPU execution stages.
+
+Encoding's [object and recording contract](video-encoding.md#encoding-recording) includes encoder/heap serialization and recorded execution order, creation-description copies distinct from GPU storage, caller-owned COM references without assumed recording AddRef, and lifetime through unsubmitted recordings that will execute and completion of submitted uses. Reconfiguration does not mutate immutable creation properties or supply codec-header/DPB policy.
+
+Meta-command discovery, resource-parameter layouts and initialization/execution are defined in the subordinate [Meta commands reference](meta-commands.md).
+
 <a id="recording-lifecycle"></a>
 
 ## Recording lifecycle
+
+<a id="create-command-allocator"></a>
+
+### ID3D12Device::CreateCommandAllocator
+
+#### Declaration
+
+```cpp
+HRESULT CreateCommandAllocator(
+    D3D12_COMMAND_LIST_TYPE type,
+    REFIID riid,
+    void** ppCommandAllocator
+);
+```
+
+#### Behavior
+
+Creates a command allocator object.
+
+The allocator supplies storage for recordings of the selected command-list
+type; creation does not begin a command-list recording. The same allocator
+may store several recordings, but only one command list may be recording to
+it at a time. [Allocator storage and reuse](#command-storage), the
+[Reset preconditions](#allocator-reset) and [CPU threading](#threading)
+apply to this object.
+
+#### Parameters
+
+`type` specifies the command-list type for the allocator: DIRECT, BUNDLE,
+COMPUTE, COPY, VIDEO_DECODE, VIDEO_PROCESS or VIDEO_ENCODE. The type must be
+supported by the device; video types require the corresponding video support.
+The allocator type must match the type of the command list that records to it.
+
+`riid` identifies the requested interface on the command allocator, normally
+`ID3D12CommandAllocator`.
+
+`ppCommandAllocator` is a required output pointer that receives the requested
+interface on the created allocator.
+
+#### Return values
+
+Successful object creation returns `S_OK`. An invalid or unsupported
+command-list type returns `E_INVALIDARG`.
+
+This method returns `E_OUTOFMEMORY` if there is insufficient memory to create the command allocator.
+
+Other creation/interface failures are reported through the returned `HRESULT`.
+
+<a id="command-list-get-type"></a>
+
+### ID3D12CommandList::GetType
+
+#### Declaration
+
+```cpp
+D3D12_COMMAND_LIST_TYPE GetType();
+```
+
+#### Behavior
+
+Gets the type of the command list, such as direct, bundle, compute, or copy.
+
+#### Return values
+
+This method returns the type of the command list,
+as a `D3D12_COMMAND_LIST_TYPE` enumeration constant,
+such as direct, bundle, compute, or copy.
 
 <a id="creation"></a>
 
@@ -270,7 +349,7 @@ The driver must preserve previously recorded command streams and bundle referenc
 
 For DDI versions using the `_0040` reset arguments, the runtime supplies a command-recorder handle associated with the allocator's command pool. Earlier reset arguments supply a command-allocator handle. The initial pipeline-state object is not an argument to either reset structure: the runtime initializes pipeline and other applicable state with state-setting DDIs. This API behavior does not require an application to negotiate a DDI version.
 
-Closing a list invokes the close-list DDI when no previously recorded error prevents it. Resetting an allocator invokes the corresponding pool/allocator storage-reset DDI; it is not a request to wait for GPU completion. Versioned object-creation, capability negotiation, and pipeline-state definitions are separate contracts.
+Closing a list invokes the close-list DDI when no previously recorded error prevents it. Resetting an allocator invokes the corresponding pool/allocator storage-reset DDI; it is not a request to wait for GPU completion. The subordinate [driver command-recording objects reference](command-recording-objects.md#object-model) defines allocator/pool/recorder/list associations, recording-generation IDs, private storage and versioned creation/reset/destruction interfaces. Its [failed-recording rules](command-recording-objects.md#failed-recording) define logical closure, recorder reuse and cleanup without guaranteed Close-DDI delivery. [Runtime UMD initialization](driver-initialization.md) owns capability and table negotiation; [command-list state](command-list-state.md) owns pipeline and other initial/reset state.
 
 <a id="lifecycle-driver-errors"></a>
 

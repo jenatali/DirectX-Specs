@@ -2,11 +2,10 @@
 
 # Shader-cache registration lifecycle and target discovery
 
-The shader-cache registration API manages the persistent catalog of applications, shader components, state-object database (SODB) paths and precompiled shader database (PSDB) paths. Catalog registration and target discovery do not compile shaders or establish that a registered cache can be consumed.
-
 The D3D Shader Cache Registration (D3DSCR) API is a nano-COM-based API for managing the registration of and enumeration of State Object Databases (SODBs) and Pre-Compiled Shader Databases (PSDBs) on the end-user system. This API is intended to be used by game installers such as the Xbox Store, Steam etc. during their game installation and update process.
 
-Application identity and version meanings are defined in [Application descriptions](state-object-databases-and-identity.md#d3d12_application_desc) and [Version numbers](state-object-databases-and-identity.md#d3d12_version_number). [Offline compilation](offline-compilation.md#offline-compilation) owns compiler discovery and target definitions; [Compiler plugin foundation](compiler-plugin-foundation.md#descriptions) owns its distinct public compiler ABI. [Compiler invocation and cache output](compiler-invocation-and-cache-output.md#output-storage) owns PSDB storage, typed/group semantics and compilation dependencies. [Shader delivery and caching](shader-delivery-and-caching.md#shader-delivery-and-caching) owns application caches and runtime cache controls.
+The [registration ABI](#registration-abi) defines the scope, application-description
+and compiler-property types used below.
 
 <a id="installation-and-updates"></a>
 
@@ -24,6 +23,60 @@ This diagram demonstrates the interactions between the Game Store/Installer and 
 6. The installer will use D3DSCR to register the newly installed PSDB for the game's component with `RegisterComponent`.
 
 The installation figure is schematic: step 2 is application registration followed by component registration, not a single call that accepts SODB paths. PSDB paths are supplied as component properties; application registration alone does not register an SODB or a PSDB.
+
+<a id="catalog-identity"></a>
+
+## Catalog identity and persistence
+
+`D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE` defines the user account scope of shader cache application registration. In practice this will determine the root path in the Windows registry where data will be stored. For example, if the installer is run with Windows Administrator privilege level then `D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE_SYSTEM` should be used.
+
+A shader component represents the pairing of one State Object Database (SODB) to zero or more Pre-Compiled Shader Databases (PSDB), identified by adapter-family mappings. A shader component has an identifying name as well as a file system path to the installed SODB file and associated PSDB files.
+
+`ID3DShaderCacheApplication` represents an application or game installed on a system. Each application can have zero or more Components which represent cached shader objects.
+
+Registration state is persistent catalog state, not the lifetime of a returned interface. User registrations are associated with the current user and system registrations are machine-wide; write access is required for the selected scope. Explorer lookup considers system and current-user state. Scope selection does not grant elevation, and the API does not define a general conflict-precedence policy among scopes or installers.
+
+Within an installer and its scope, application-name registration is an upsert: reusing a registered application name updates its description and executable path while retaining its components. The full executable path is the explorer lookup key, not proof of a unique catalog entry across names or installers. `pExeFilename` instead supplies the game's stable identifying filename even when the on-disk file is renamed. No path-canonicalization, hard-link equivalence, unique-executable ownership or case-distinct-name isolation guarantee is added by this description.
+
+Component registration updates the named SODB association and supplied adapter-family mappings. Families not supplied by an update are retained; remove the component registration when the entire association must be removed. Registration removal and file deletion are different operations. Registering a path does not validate file contents or transfer file ownership.
+
+Application/component objects own the metadata returned by their pointer getters. Updating or removing catalog entries does not define a global coherent snapshot or force all previously acquired objects to refresh simultaneously. The specific object supplied to removal is invalidated; count and enumeration results can also be affected by catalog access failures and changes. Counts are not stable identifiers.
+
+[Automatic runtime discovery](runtime-cache-discovery.md#default-discovery) defines the process-path lookup, exact `default` component and current-family path used during device initialization. Its [retained-state rules](runtime-cache-discovery.md#failure-and-lifetime) do not turn these catalog objects into live views or make registration updates refresh an existing device automatically.
+
+Active installer exclusion uses the installer name and scope. For `D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE_USER`, a name can have only one active installer within a Windows session; this does not exclude another session. For `D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE_SYSTEM`, the exclusion applies across the machine. Active installer names are compared case-sensitively.
+
+Persistent installer, application, component and adapter-family catalog keys are case-insensitive. Case-variant active installer names therefore do not establish independent catalogs or safe identity-isolated writes. The client must return a consistent installer name throughout its installer object's lifetime. Catalog identity and active-instance exclusion are distinct rules.
+
+`ID3DShaderCacheExplorer` creates a read-only view of the current state of the shader cache registration on the system. Any mutable operations on `ID3DShaderCacheApplication` or `ID3DShaderCacheComponent` objects obtained through this interface will fail and no state will be updated.
+
+<a id="target-discovery"></a>
+
+## Target discovery
+
+Installer target discovery returns compiler compatibility information for each GPU adapter that supports using Precompiled Shader Databases(PSDB).
+
+CompilerVersion is provided for informational purposes.  It indicates the version of the compiler itself, and may not rev when application profiles do.
+
+For installer system-target discovery, when the D3D_SHADER_CACHE_APPLICATION_DESC is provided, it is used to filter the adapter list to the adapters preferred for use with the application.  The D3D_SHADER_CACHE_APPLICATION_DESC also informs the ApplicationProfileVersion, which is necessary to determine PSDB compatibility for a given application.
+
+For installer target enumeration, D3D_SHADER_CACHE_APPLICATION_DESC is optional.  If not supplied, the ApplicationProfileVersion is not determined and is set to zero on output.  It may be useful to initially obtain version information that is not dependent on application identity when negotiating with services, but ApplicationProfileVersion should still be checked for compatibility before downloading PSDBs.  Additionally, the list of preferred adapters is not filtered when application identity is not known, so a check with application identity is needed to only download psdbs for preferred adapters.
+
+When application metadata is supplied, system-target discovery must filter eligible adapter records to the adapters preferred for that application and sort the results by application preference. Installer-derived application targets follow this application-dependent discovery contract. Eligibility and application preference determine the candidate records; they are distinct from compiler-family support, ABI intersection and application-profile queries. No particular Windows settings algorithm, order among equally preferred adapters, or stability across updates is specified.
+
+An explorer's explicit device or adapter context is caller-selected and scopes discovery to that context. A system application-preference list must not silently discard that explicitly selected context. A catalog-only explorer has no adapter targets.
+
+The installer captures its adapter records during installer creation. Records without offline-cache ABI metadata or without a present adapter at that time do not contribute. `GetMaxPrecompileTargetCount` is the resulting snapshot's upper bound, not a new physical-hardware query. Later driver or compiler changes can affect profile queries and can cause adapter omission or discovery failure without automatically refreshing that bound. An application object retains its discovered target records; callbacks do not automatically refresh those records.
+
+The driver-supported interval is inclusive. An adapter-family identifier, supported ABI interval, compiler version and application profile are not interchangeable identifiers. See [Version domains](offline-compilation.md#version-domains) and the device's [shader-cache ABI support payload](devices-and-capabilities.md#d3d12_feature_data_shadercache_abi_support). Discovery reports driver-side target information; it does not expand the compiler factory's potentially sparse supported-ABI set or make every ABI in a driver interval available from every registered compiler.
+
+The installer upper-bound query, installer in/out-capacity enumeration, application count/fixed-capacity prefix copy, and component exact-size PSDB-map copy are four distinct protocols. Returned records need not be unique by adapter family. Application-preference sorting does not establish a stable tie order, a cross-call race-free snapshot or automatic callback-driven refresh.
+
+[PSDB recognition and compatibility](runtime-cache-discovery.md#compatibility) define runtime eligibility independently of these target-array protocols. [Compatible-output preference and driver reporting](runtime-cache-discovery.md#preference-and-reporting) distinguish installer/service recommendations from the runtime's one-path default lookup and from application-preferred adapter filtering.
+
+For an application-dependent profile query, registration resolves the adapter's family in its registered compiler, enumerates that compiler's [supported family ABI set](offline-compilation.md#id3d12compilerfactory-enumerateadapterfamilyabiversions), and chooses the greatest member within the driver's inclusive minimum/maximum ABI interval. It queries the [application profile](offline-compilation.md#id3d12compilerfactory-getapplicationprofileversion) for that compiler target and the supplied application metadata.
+
+An incompatible compiler family or an empty intersection with the driver's interval fails discovery with `DXGI_ERROR_DRIVER_INTERNAL_ERROR`. A missing registered compiler path can omit the adapter; other compiler/adapter query failures can fail discovery. The returned record still reports the driver's ABI interval and compiler version, not a contiguous expansion of the compiler's supported ABI set and not necessarily the ABI chosen to query the profile. Without application metadata no application profile is queried and `ApplicationProfileVersion` is zero.
 
 <a id="registration-abi"></a>
 
@@ -147,56 +200,6 @@ Notes:
 - The pExeFilename should be the filename for the main game exe, not any storefront or other game launchers.  The filename should be the game's typical filename, and does not have to match the exe filename on disk.  For example, if the game exe were simply renamed, the pExeFilename passed to this API does not change.
 
 `D3D_SHADER_CACHE_PSDB_PROPERTIES` pairs a NUL-terminated adapter-family identifier with a NUL-terminated PSDB file path. The compiler properties contain an inline `wchar_t[128]` family string, inclusive minimum/maximum driver-supported ABI values, the compiler version, and an application-dependent profile version. The inline family storage is 128 wide characters including any terminating NUL, not a pointer or a byte length. Compiler versions, ABI versions, application/engine versions and application profile versions are different domains. Target identity and ABI/profile meaning are defined by [Offline compilation](offline-compilation.md#offline-compilation); this registration structure does not change newest-first compiler ABI enumeration or the compiler's zero-as-maximum target convention.
-
-<a id="catalog-identity"></a>
-
-## Catalog identity and persistence
-
-`D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE` defines the user account scope of shader cache application registration. In practice this will determine the root path in the Windows registry where data will be stored. For example, if the installer is run with Windows Administrator privilege level then `D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE_SYSTEM` should be used.
-
-A shader component represents the pairing of one State Object Database (SODB) to zero or more Pre-Compiled Shader Databases (PSDB), identified by adapter-family mappings. A shader component has an identifying name as well as a file system path to the installed SODB file and associated PSDB files.
-
-`ID3DShaderCacheApplication` represents an application or game installed on a system. Each application can have zero or more Components which represent cached shader objects.
-
-Registration state is persistent catalog state, not the lifetime of a returned interface. User registrations are associated with the current user and system registrations are machine-wide; write access is required for the selected scope. Explorer lookup considers system and current-user state. Scope selection does not grant elevation, and the API does not define a general conflict-precedence policy among scopes or installers.
-
-Within an installer and its scope, application-name registration is an upsert: reusing a registered application name updates its description and executable path while retaining its components. The full executable path is the explorer lookup key, not proof of a unique catalog entry across names or installers. `pExeFilename` instead supplies the game's stable identifying filename even when the on-disk file is renamed. No path-canonicalization, hard-link equivalence, unique-executable ownership or case-distinct-name isolation guarantee is added by this description.
-
-Component registration updates the named SODB association and supplied adapter-family mappings. Families not supplied by an update are retained; remove the component registration when the entire association must be removed. Registration removal and file deletion are different operations. Registering a path does not validate file contents or transfer file ownership.
-
-Application/component objects own the metadata returned by their pointer getters. Updating or removing catalog entries does not define a global coherent snapshot or force all previously acquired objects to refresh simultaneously. The specific object supplied to removal is invalidated; count and enumeration results can also be affected by catalog access failures and changes. Counts are not stable identifiers.
-
-Active installer exclusion uses the installer name and scope. For `D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE_USER`, a name can have only one active installer within a Windows session; this does not exclude another session. For `D3D_SHADER_CACHE_APP_REGISTRATION_SCOPE_SYSTEM`, the exclusion applies across the machine. Active installer names are compared case-sensitively.
-
-Persistent installer, application, component and adapter-family catalog keys are case-insensitive. Case-variant active installer names therefore do not establish independent catalogs or safe identity-isolated writes. The client must return a consistent installer name throughout its installer object's lifetime. Catalog identity and active-instance exclusion are distinct rules.
-
-`ID3DShaderCacheExplorer` creates a read-only view of the current state of the shader cache registration on the system. Any mutable operations on `ID3DShaderCacheApplication` or `ID3DShaderCacheComponent` objects obtained through this interface will fail and no state will be updated.
-
-<a id="target-discovery"></a>
-
-## Target discovery
-
-Installer target discovery returns compiler compatibility information for each GPU adapter that supports using Precompiled Shader Databases(PSDB).
-
-CompilerVersion is provided for informational purposes.  It indicates the version of the compiler itself, and may not rev when application profiles do.
-
-For installer system-target discovery, when the D3D_SHADER_CACHE_APPLICATION_DESC is provided, it is used to filter the adapter list to the adapters preferred for use with the application.  The D3D_SHADER_CACHE_APPLICATION_DESC also informs the ApplicationProfileVersion, which is necessary to determine PSDB compatibility for a given application.
-
-For installer target enumeration, D3D_SHADER_CACHE_APPLICATION_DESC is optional.  If not supplied, the ApplicationProfileVersion is not determined and is set to zero on output.  It may be useful to initially obtain version information that is not dependent on application identity when negotiating with services, but ApplicationProfileVersion should still be checked for compatibility before downloading PSDBs.  Additionally, the list of preferred adapters is not filtered when application identity is not known, so a check with application identity is needed to only download psdbs for preferred adapters.
-
-When application metadata is supplied, system-target discovery must filter eligible adapter records to the adapters preferred for that application and sort the results by application preference. Installer-derived application targets follow this application-dependent discovery contract. Eligibility and application preference determine the candidate records; they are distinct from compiler-family support, ABI intersection and application-profile queries. No particular Windows settings algorithm, order among equally preferred adapters, or stability across updates is specified.
-
-An explorer's explicit device or adapter context is caller-selected and scopes discovery to that context. A system application-preference list must not silently discard that explicitly selected context. A catalog-only explorer has no adapter targets.
-
-The installer captures its adapter records during installer creation. Records without offline-cache ABI metadata or without a present adapter at that time do not contribute. `GetMaxPrecompileTargetCount` is the resulting snapshot's upper bound, not a new physical-hardware query. Later driver or compiler changes can affect profile queries and can cause adapter omission or discovery failure without automatically refreshing that bound. An application object retains its discovered target records; callbacks do not automatically refresh those records.
-
-The driver-supported interval is inclusive. An adapter-family identifier, supported ABI interval, compiler version and application profile are not interchangeable identifiers. See [Version domains](offline-compilation.md#version-domains) and the device's [shader-cache ABI support payload](devices-and-capabilities.md#d3d12_feature_data_shadercache_abi_support). Discovery reports driver-side target information; it does not expand the compiler factory's potentially sparse supported-ABI set or make every ABI in a driver interval available from every registered compiler.
-
-The installer upper-bound query, installer in/out-capacity enumeration, application count/fixed-capacity prefix copy, and component exact-size PSDB-map copy are four distinct protocols. Returned records need not be unique by adapter family. Application-preference sorting does not establish a stable tie order, a cross-call race-free snapshot or automatic callback-driven refresh.
-
-For an application-dependent profile query, registration resolves the adapter's family in its registered compiler, enumerates that compiler's [supported family ABI set](offline-compilation.md#id3d12compilerfactory-enumerateadapterfamilyabiversions), and chooses the greatest member within the driver's inclusive minimum/maximum ABI interval. It queries the [application profile](offline-compilation.md#id3d12compilerfactory-getapplicationprofileversion) for that compiler target and the supplied application metadata.
-
-An incompatible compiler family or an empty intersection with the driver's interval fails discovery with `DXGI_ERROR_DRIVER_INTERNAL_ERROR`. A missing registered compiler path can omit the adapter; other compiler/adapter query failures can fail discovery. The returned record still reports the driver's ABI interval and compiler version, not a contiguous expansion of the compiler's supported ABI set and not necessarily the ABI chosen to query the profile. Without application metadata no application profile is queried and `ApplicationProfileVersion` is zero.
 
 <a id="factory-bootstrap"></a>
 

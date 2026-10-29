@@ -2095,6 +2095,8 @@ Specifies that this resource may be used only as a decode reference frame. It ma
 
 [`D3D12_VIDEO_DECODE_TIER_3`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12video/ne-d3d12video-d3d12_video_decode_tier) must not set the [`D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12video/ne-d3d12video-d3d12_video_decode_configuration_flags) configuration flag, and must not require the use of this resource flag.
 
+Decode capability/tier requirements and native reference/output roles are defined in [Video decode](video-decode.md#decode-capabilities). The resource flag's access restrictions and the [ordinary-copy prohibition](resource-operations.md#copy-self-and-alias) remain operative.
+
 ### D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY
 
 Specifies that this resource may be used only as an encode reference frame. It may be written to or read only by the video encode operation.
@@ -2703,6 +2705,12 @@ The following object types support application-controlled residency:
 | `ID3D12VideoEncoderHeap` | Encoder-heap backing allocations |
 
 A placed resource borrows its heap's memory; a reserved resource's tile mappings refer to heaps. Residency of that backing memory is managed through its owning heap rather than by treating each mapping as an independent allocation. Inheritance from `ID3D12Pageable` is not by itself permission to call application residency methods: command allocators, command queues, pipeline state objects, meta-commands and state objects are not direct application-residency targets.
+
+Motion-estimator and opaque vector-heap [allocation and residency](video-motion-estimation.md#motion-driver-objects) distinguish driver-private CPU object bytes from [GPU memory-pool sizes](video-motion-estimation.md#d3d12-feature-data-video-motion-estimator-size). The vector heap is not an application picture texture or an ID3D12Heap allocation.
+
+Video extension-command [object allocation and resource parameters](video-extension-commands.md#extension-objects) distinguish private driver-object storage, GPU residency allocations and resources named in packed blobs. The [creation-dependent size qualification](video-extension-commands.md#extension-qualifications) remains explicit; an apparently plausible query result is not independent proof of correct allocation accounting.
+
+Encoding's [readable reconstructed-picture contract](video-encoding-controls.md#control-readable-reconstruction) conditionally permits ordinary reconstructed/DPB textures when the supported encoding tuple reports readable-layout support. The reference-only path remains supported; reporting readable support must not hide a driver-side layout conversion/performance hit. The ordinary input picture is not reference-only. Codec-specific formats, dimensions, reference storage and lifetime obligations remain applicable; [full/downscaled DPB allocations](video-encoding-controls.md#family-lowerresolution-2pass) retain their separate requirements.
 
 D3D12's heap eviction interface gives applications the ability to reduce their memory footprint by evicting without actually destroying the heap. The application can then "make the heap resident" again to make it available for rendering.
 

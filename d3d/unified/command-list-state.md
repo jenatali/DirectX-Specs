@@ -10,6 +10,10 @@ The initial values in this reference apply when `CreateCommandList` or a success
 
 These are command-list binding and recording-context rules, not resource-data initialization. They do not clear descriptor heap contents, buffers, textures, counter/query data, acceleration structures, or work-graph backing memory. Resetting a list object does not reclaim allocator storage or establish GPU completion; see [recorded commands and allocator storage](execution.md#command-storage).
 
+The base VIDEO_ENCODE [ClearState, Close and Reset](video-motion-estimation.md#motion-recording) contracts are defined separately from the graphics/compute state families below. Encode ClearState/Reset disable predication and, on protection-capable nodes, clear the protected-session binding; they do not erase motion-vector heap contents or complete earlier GPU work.
+
+The six Video [extension initialization/execution methods](video-extension-commands.md#extension-recording) retain extension-defined predication and state/sequencing contracts. They do not inherit Meta-command's initialization policy or establish a generic dirty-state mask or automatic ClearState rule.
+
 <a id="state-index"></a>
 
 ## State-family index
@@ -479,9 +483,11 @@ Command-signature construction, argument/count buffers and execution are defined
 
 **Related APIs:** `ID3D12GraphicsCommandList4::ExecuteMetaCommand`, `ID3D12GraphicsCommandList4::InitializeMetaCommand`.
 
-You must initialize a meta command at least once prior (on the GPU's timeline) to executing it. Initializing gives the implementation the chance to perform any work necessary to accelerate the invocation of the meta command. You must supply the sufficient resource parameters, including the persistent cache resource.
+[InitializeMetaCommand](meta-commands.md#initializemetacommand) defines GPU initialization ordering and the selected algorithm's resource requirements; [ExecuteMetaCommand](meta-commands.md#executemetacommand) defines invocation. Their declared state effects remain defined below.
 
-The dirty-state fields are in [`D3D12_META_COMMAND_DESC`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_meta_command_desc) and have type [`D3D12_GRAPHICS_STATES`](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_graphics_states#constants), whose flag meanings identify the affected state families. Meta-command initialization/execution is therefore a state-affecting recorded operation even though its name is not a state setter. Reestablish the state required by later work when the declared dirty-state mask affects it. The meta command's GPU initialization and persistent resources are not automatically reinitialized by command-list Reset.
+The dirty-state fields are in [`D3D12_META_COMMAND_DESC`](meta-commands.md#d3d12_meta_command_desc) and have type [`D3D12_GRAPHICS_STATES`](meta-commands.md#d3d12_graphics_states), whose flag meanings identify the affected state families. Meta-command initialization/execution is therefore a state-affecting recorded operation even though its name is not a state setter. Reestablish the state required by later work when the declared dirty-state mask affects it. The meta command's GPU initialization and persistent resources are not automatically reinitialized by command-list Reset.
+
+> **Draft qualification:** Whether an all-bits dirty-state mask implies the postconditions of `ClearState` remains unresolved. This draft does not assert that equivalence or assign Reset/default values from it. The affected-state restoration requirement above remains operative. The [scoped review](../../spec-maintenance/d3d12/meta-command-review.md) records the withheld claim and its evidence limits.
 
 ### InitializationDirtyState
 

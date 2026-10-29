@@ -1665,6 +1665,8 @@ HRESULT CreateStateObject(
 
 #### Behavior
 
+The driver can use [runtime compiled-value lookup](runtime-cache-discovery.md#compiled-value-lookup) while processing this ordinary creation description.
+
 See [Compilation and object model](#object-model) for an overview.
 
 Parameter                               | Definition
@@ -1692,6 +1694,8 @@ HRESULT AddToStateObject(
 #### Behavior
 
 `AddToStateObject` requires `D3D12_RAYTRACING_TIER_1_1` or higher for every call, including additions to generic-program and work-graph executable state objects. Calls below that tier fail with `E_INVALIDARG`. The requirements of the selected workload also apply.
+
+The driver can use [runtime compiled-value lookup](runtime-cache-discovery.md#compiled-value-lookup) while processing this ordinary creation description.
 
 The following rules apply to raytracing pipeline additions. [Executable work-graph and generic-program additions](#executable-additions) are specified separately below.
 

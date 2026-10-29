@@ -1459,8 +1459,8 @@ The [truth table](#predication), [state/access restrictions](#predicate-state) a
 | [`ID3D12GraphicsCommandList4::DispatchRays`](raytracing-pipelines.md#id3d12graphicscommandlist4dispatchrays) | predicated | DIRECT/COMPUTE; BUNDLE only when that operation independently permits it. |
 | [`ID3D12GraphicsCommandList4::EmitRaytracingAccelerationStructurePostbuildInfo`](acceleration-structures.md#emitraytracingaccelerationstructurepostbuildinfo) | unpredicated | DIRECT/COMPUTE; not BUNDLE; normal acceleration-structure validity rules apply. |
 | `ID3D12GraphicsCommandList4::EndRenderPass` | wrapper | DIRECT. Translated ending-access RESOLVE work honors the predicate; boundary/synchronization effects remain independent. |
-| `ID3D12GraphicsCommandList4::ExecuteMetaCommand` | conditional | Permitted command-list types and the selected meta-command's contract. Execution predicate behavior depends on the meta-command contract; state-damage flags do not specify it. |
-| `ID3D12GraphicsCommandList4::InitializeMetaCommand` | unpredicated | Permitted command-list types and the selected meta-command's contract. |
+| [`ID3D12GraphicsCommandList4::ExecuteMetaCommand`](meta-commands.md#executemetacommand) | conditional | DIRECT/COMPUTE; not BUNDLE. Execution predicate behavior is defined by the selected algorithm; state-damage flags do not specify it. |
+| [`ID3D12GraphicsCommandList4::InitializeMetaCommand`](meta-commands.md#initializemetacommand) | unpredicated | DIRECT/COMPUTE; not BUNDLE. Initialization ignores predication; operation/resource legality remains separate. |
 | `ID3D12GraphicsCommandList6::DispatchMesh` | predicated | DIRECT; permitted BUNDLE operations use the inherited predicate. |
 | `ID3D12GraphicsCommandList7::Barrier` | unpredicated | On the independently supported list types. |
 | `ID3D12GraphicsCommandList::BeginQuery` | unpredicated | Only the query/list/heap combinations in the support tables. |
@@ -1483,44 +1483,44 @@ The [truth table](#predication), [state/access restrictions](#predicate-state) a
 | `ID3D12GraphicsCommandList::ResolveQueryData` | unpredicated | Only the query/list/heap combinations in the GPU resolution support table. |
 | `ID3D12GraphicsCommandList::ResolveSubresource` | predicated | DIRECT. |
 | `ID3D12GraphicsCommandList::ResourceBarrier` | unpredicated | On the independently supported list types. |
-| `ID3D12VideoDecodeCommandList1::DecodeFrame1` | predicated | VIDEO_DECODE; versioned shared decode operation. |
-| `ID3D12VideoDecodeCommandList2::ExecuteExtensionCommand` | conditional | VIDEO_DECODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
-| `ID3D12VideoDecodeCommandList2::InitializeExtensionCommand` | conditional | VIDEO_DECODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
+| [`ID3D12VideoDecodeCommandList1::DecodeFrame1`](video-decode.md#decode-frame1) | predicated | VIDEO_DECODE; versioned shared decode operation. |
+| [`ID3D12VideoDecodeCommandList2::ExecuteExtensionCommand`](video-extension-commands.md#videodecodecommandlist2-executeextensioncommand) | conditional | VIDEO_DECODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
+| [`ID3D12VideoDecodeCommandList2::InitializeExtensionCommand`](video-extension-commands.md#videodecodecommandlist2-initializeextensioncommand) | conditional | VIDEO_DECODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
 | `ID3D12VideoDecodeCommandList3::Barrier` | unpredicated | video-decode. |
 | `ID3D12VideoDecodeCommandList::BeginQuery` | unsupported | VIDEO_DECODE supports only end-only timestamp/decode-statistics query types. |
 | `ID3D12VideoDecodeCommandList::Close` | wrapper | recording; CPU-query fallback flush when applicable. |
-| `ID3D12VideoDecodeCommandList::DecodeFrame` | predicated | VIDEO_DECODE. |
+| [`ID3D12VideoDecodeCommandList::DecodeFrame`](video-decode.md#decode-frame) | predicated | VIDEO_DECODE. |
 | `ID3D12VideoDecodeCommandList::DiscardResource` | unpredicated | Discard is a hint; no conditional preservation of resource contents is guaranteed. An implementation may ignore the hint. |
 | `ID3D12VideoDecodeCommandList::EndQuery` | unpredicated | VIDEO_DECODE timestamp or decode-statistics. |
 | `ID3D12VideoDecodeCommandList::ResolveQueryData` | unpredicated | Only the query/list/heap combinations in the GPU resolution support table. |
 | `ID3D12VideoDecodeCommandList::ResourceBarrier` | unpredicated | video-decode. |
 | `ID3D12VideoDecodeCommandList::WriteBufferImmediate` | predicated | On permitted list types; COPY has no supported predicate selection. |
-| `ID3D12VideoEncodeCommandList1::ExecuteExtensionCommand` | conditional | VIDEO_ENCODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
-| `ID3D12VideoEncodeCommandList1::InitializeExtensionCommand` | conditional | VIDEO_ENCODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
-| `ID3D12VideoEncodeCommandList2::EncodeFrame` | predicated | VIDEO_ENCODE; codec/support requirements separate. |
-| `ID3D12VideoEncodeCommandList2::ResolveEncoderOutputMetadata` | predicated | VIDEO_ENCODE; metadata resolution operation. |
+| [`ID3D12VideoEncodeCommandList1::ExecuteExtensionCommand`](video-extension-commands.md#videoencodecommandlist1-executeextensioncommand) | conditional | VIDEO_ENCODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
+| [`ID3D12VideoEncodeCommandList1::InitializeExtensionCommand`](video-extension-commands.md#videoencodecommandlist1-initializeextensioncommand) | conditional | VIDEO_ENCODE. Predicate behavior is defined by the extension; no API-wide guarantee. |
+| [`ID3D12VideoEncodeCommandList2::EncodeFrame`](video-encoding.md#id3d12videoencodecommandlist2--encodeframe) | predicated | VIDEO_ENCODE; codec/support requirements separate. |
+| [`ID3D12VideoEncodeCommandList2::ResolveEncoderOutputMetadata`](video-encoding.md#id3d12videoencodecommandlist2--resolveencoderoutputmetadata) | predicated | VIDEO_ENCODE; metadata resolution operation. |
 | `ID3D12VideoEncodeCommandList3::Barrier` | unpredicated | video-encode. |
-| `ID3D12VideoEncodeCommandList4::EncodeFrame1` | predicated | VIDEO_ENCODE; supported codec/argument/conversion paths only. |
-| `ID3D12VideoEncodeCommandList4::ResolveEncoderOutputMetadata1` | predicated | VIDEO_ENCODE; supported codec/argument/conversion paths only. |
-| `ID3D12VideoEncodeCommandList4::ResolveInputParamLayout` | predicated | VIDEO_ENCODE; supported codec/argument/conversion paths only. |
+| [`ID3D12VideoEncodeCommandList4::EncodeFrame1`](video-encoding.md#id3d12videoencodecommandlist4--encodeframe1) | predicated | VIDEO_ENCODE; supported codec/argument/conversion paths only. |
+| [`ID3D12VideoEncodeCommandList4::ResolveEncoderOutputMetadata1`](video-encoding.md#id3d12videoencodecommandlist4--resolveencoderoutputmetadata1) | predicated | VIDEO_ENCODE; supported codec/argument/conversion paths only. |
+| [`ID3D12VideoEncodeCommandList4::ResolveInputParamLayout`](video-encoding.md#id3d12videoencodecommandlist4--resolveinputparamlayout) | predicated | VIDEO_ENCODE; supported codec/argument/conversion paths only. |
 | `ID3D12VideoEncodeCommandList::BeginQuery` | unsupported | VIDEO_ENCODE supports timestamp only. |
 | `ID3D12VideoEncodeCommandList::Close` | wrapper | recording; CPU-query fallback flush when applicable. |
 | `ID3D12VideoEncodeCommandList::DiscardResource` | unpredicated | Discard is a hint; no conditional preservation of resource contents is guaranteed. An implementation may ignore the hint. |
 | `ID3D12VideoEncodeCommandList::EndQuery` | unpredicated | VIDEO_ENCODE timestamp. |
-| `ID3D12VideoEncodeCommandList::EstimateMotion` | predicated | VIDEO_ENCODE; motion-estimation support. |
-| `ID3D12VideoEncodeCommandList::ResolveMotionVectorHeap` | predicated | VIDEO_ENCODE; motion-estimation support. |
+| [`ID3D12VideoEncodeCommandList::EstimateMotion`](video-motion-estimation.md#motion-estimate) | predicated | VIDEO_ENCODE; motion-estimation support. |
+| [`ID3D12VideoEncodeCommandList::ResolveMotionVectorHeap`](video-motion-estimation.md#motion-resolve) | predicated | VIDEO_ENCODE; motion-estimation support. |
 | `ID3D12VideoEncodeCommandList::ResolveQueryData` | unpredicated | Only the query/list/heap combinations in the GPU resolution support table. |
 | `ID3D12VideoEncodeCommandList::ResourceBarrier` | unpredicated | video-encode. |
 | `ID3D12VideoEncodeCommandList::WriteBufferImmediate` | predicated | On permitted list types; COPY has no supported predicate selection. |
-| `ID3D12VideoProcessCommandList1::ProcessFrames1` | predicated | VIDEO_PROCESS; versioned shared process operation. |
-| `ID3D12VideoProcessCommandList2::ExecuteExtensionCommand` | conditional | VIDEO_PROCESS. Predicate behavior is defined by the extension; no API-wide guarantee. |
-| `ID3D12VideoProcessCommandList2::InitializeExtensionCommand` | conditional | VIDEO_PROCESS. Predicate behavior is defined by the extension; no API-wide guarantee. |
+| [`ID3D12VideoProcessCommandList1::ProcessFrames1`](video-processing.md#process-frames1) | predicated | VIDEO_PROCESS; versioned shared process operation. |
+| [`ID3D12VideoProcessCommandList2::ExecuteExtensionCommand`](video-extension-commands.md#videoprocesscommandlist2-executeextensioncommand) | conditional | VIDEO_PROCESS. Predicate behavior is defined by the extension; no API-wide guarantee. |
+| [`ID3D12VideoProcessCommandList2::InitializeExtensionCommand`](video-extension-commands.md#videoprocesscommandlist2-initializeextensioncommand) | conditional | VIDEO_PROCESS. Predicate behavior is defined by the extension; no API-wide guarantee. |
 | `ID3D12VideoProcessCommandList3::Barrier` | unpredicated | video-process. |
 | `ID3D12VideoProcessCommandList::BeginQuery` | unsupported | VIDEO_PROCESS supports timestamp only. |
 | `ID3D12VideoProcessCommandList::Close` | wrapper | recording; CPU-query fallback flush when applicable. |
 | `ID3D12VideoProcessCommandList::DiscardResource` | unpredicated | Discard is a hint; no conditional preservation of resource contents is guaranteed. An implementation may ignore the hint. |
 | `ID3D12VideoProcessCommandList::EndQuery` | unpredicated | VIDEO_PROCESS timestamp. |
-| `ID3D12VideoProcessCommandList::ProcessFrames` | predicated | VIDEO_PROCESS. |
+| [`ID3D12VideoProcessCommandList::ProcessFrames`](video-processing.md#process-frames) | predicated | VIDEO_PROCESS. |
 | `ID3D12VideoProcessCommandList::ResolveQueryData` | unpredicated | Only the query/list/heap combinations in the GPU resolution support table. |
 | `ID3D12VideoProcessCommandList::ResourceBarrier` | unpredicated | video-process. |
 | `ID3D12VideoProcessCommandList::WriteBufferImmediate` | predicated | On permitted list types; COPY has no supported predicate selection. |

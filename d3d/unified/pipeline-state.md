@@ -1247,6 +1247,8 @@ Creates a graphics pipeline state object.
 
 Uses the [graphics description](#graphics-description) and [compatibility rules](#compatibility). The resulting object is an `ID3D12PipelineState`.
 
+The driver can use [runtime compiled-value lookup](runtime-cache-discovery.md#compiled-value-lookup) while processing this ordinary creation description.
+
 #### Parameters
 
 `[in] pDesc`
@@ -1285,6 +1287,8 @@ Creates a compute pipeline state object.
 
 Uses the [compute description](#compute-description). The compute shader and root signature must be compatible.
 
+The driver can use [runtime compiled-value lookup](runtime-cache-discovery.md#compiled-value-lookup) while processing this ordinary creation description.
+
 #### Parameters
 
 `[in] pDesc`
@@ -1322,6 +1326,8 @@ HRESULT CreatePipelineState(
 Creates a pipeline state object from a pipeline state stream description.
 
 Uses the [tagged stream layout and pipeline selection rules](#streams). Payload representation, padding and relevant creation conditions remain part of this contract.
+
+The driver can use [runtime compiled-value lookup](runtime-cache-discovery.md#compiled-value-lookup) while processing this ordinary creation description.
 
 #### Parameters
 

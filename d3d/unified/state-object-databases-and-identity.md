@@ -4,9 +4,6 @@
 
 A state-object database (SODB) stores pipeline-state and state-object creation
 inputs, including their shader bytecode. It is not a driver-compiled cache.
-Offline frontend compilation from HLSL to bytecode is distinct from offline
-driver/pipeline compilation. Supported legacy cached blobs and pipeline
-libraries retain their [existing contracts](shader-delivery-and-caching.md).
 
 <a id="database-inputs"></a>
 
@@ -95,6 +92,14 @@ case is separate from object-key validity: pass `nullptr` with size zero for
 `pStateObjectToGrowFromKey` when there is no parent; otherwise supply a nonnull,
 nonempty key identifying the already stored parent.
 
+<a id="published-database-format"></a>
+
+### Published database format
+
+The complete [published SQLite format](state-object-database-format.md)
+defines the schema, object groups, dependency relationships and application
+metadata row. Its format version is not an object or application version.
+
 <a id="application-metadata"></a>
 
 ## Application metadata and identity
@@ -181,72 +186,6 @@ or version fields. Identity metadata is not an authentication or permissions
 mechanism. `SetApplicationDesc` stores the application description, not an
 `AppId` argument; the published [format](state-object-database-format.md#published-sql-schema)
 has no application-GUID column.
-
-<a id="id3d12applicationidentity-setapplicationidentity"></a>
-
-### ID3D12ApplicationIdentity::SetApplicationIdentity
-
-#### Declaration
-
-```cpp
-HRESULT SetApplicationIdentity(const D3D12_APPLICATION_DESC* pDesc, REFGUID AppId);
-```
-
-#### Behavior
-
-Sets or resets application identity in the global or factory configuration from
-which this interface was retrieved. The configured identity applies to subsequent
-device creation in that configuration's scope.
-
-Use `CLSID_D3D12ApplicationIdentity`
-(`08d8e1e8-75a6-42a7-bf3a-d05fe529c47c`) with
-[`D3D12GetInterface`](devices-and-capabilities.md#d3d12getinterface) for the
-global default identity used in subsequent device creation. Use
-[`ID3D12DeviceFactory::GetConfigurationInterface`](devices-and-capabilities.md#id3d12devicefactory-getconfigurationinterface)
-with the same class identifier for a factory's identity configuration.
-Both expose `ID3D12ApplicationIdentity`, derived from `IUnknown`.
-
-The [factory snapshot rules](devices-and-capabilities.md#id3d12devicefactory-initializefromglobalstate)
-and [ApplyToGlobalState](devices-and-capabilities.md#id3d12devicefactory-applytoglobalstate)
-govern copying configuration between global and factory state. Changing the
-global identity does not mutate a previously taken factory snapshot; changing
-configuration does not retroactively change identity already used for an
-existing device. Set the intended configuration before the corresponding
-device creation. The input strings and values are copied into configuration;
-the caller need not keep their buffers alive after the call returns.
-
-#### Parameters
-
-`pDesc` (`const D3D12_APPLICATION_DESC*`, input)
-
-The application description to set. For a non-reset call this pointer and its
-referenced strings must be valid and readable for the duration of the call.
-The application must supply a nonempty application name. See
-[`D3D12_APPLICATION_DESC`](#d3d12_application_desc) for filename fallback and
-engine/version requirements. The configuration copies the input data.
-
-`AppId` (`REFGUID`, input)
-
-A version 4 universally unique identifier generated for the app that is
-self-identifying. It must not be `GUID_NULL` when `pDesc` is nonnull.
-
-To reset the configured identity, pass null `pDesc` together with `GUID_NULL`.
-The reset removes the configured identity from this global or factory
-configuration for future device creation; it does not alter existing devices
-or previously copied configuration snapshots. A null description with a nonnull
-GUID, or a nonnull description with `GUID_NULL`, is an invalid pair.
-
-When `ID3D12ApplicationIdentity::SetApplicationIdentity` is called with a nonnull
-description whose `D3D12_APPLICATION_DESC::pExeFilename` is null, the executable
-filename is determined by calling `GetModuleFileName` with a NULL handle.
-
-#### Return values
-
-Successful configuration, including reset, returns `S_OK`. A mismatched
-null-description/`GUID_NULL` pair returns `E_INVALIDARG`; allocation failure can
-return `E_OUTOFMEMORY`. The nonempty application-name requirement applies
-independently of implementation validation. No general rollback of configuration
-changes is guaranteed after an allocation failure.
 
 <a id="storage-only-forms"></a>
 
@@ -356,6 +295,10 @@ readable export descriptions for the duration of the store call.
 
 `D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION_BY_KEY` is defined so that `D3D12_STATE_OBJECT_DESC` can refer to existing collections by key rather than by driver-dependent `ID3D12StateObject` pointers.  This is used for storing `D3D12_STATE_OBJECT_DESC` in an SODB, but cannot be used with API that create API state objects such as `ID3D12Device5::CreateStateObject` or `ID3D12Compiler::CompileStateObject`.
 
+<a id="restoring-stored-input-graphs"></a>
+
+## Restoring stored input graphs
+
 To restore a stored input graph for actual object creation:
 
 1. Find the requested description by its application-selected key. Preserve the
@@ -384,8 +327,6 @@ creation failure: record it in caller-owned context and check it separately
 from the lookup result. No database callback rule here prohibits all D3D calls.
 
 For offline compilation, the [compiler input and ownership contract](compiler-invocation-and-cache-output.md#input-ownership) defines serialized roots, live compiler collections and live addition parents after restoring database-key dependencies. [Compiler output groups](compiler-invocation-and-cache-output.md#id3d12compilercachesession-storegroupvaluekeys) have their own mapping/version rules; an SODB object mapping is not a PSDB group or compiled value.
-
-[Component registration](shader-cache-registration.md#id3dshadercacheapplication-registercomponent) associates an application's named component with an SODB path and adapter-family PSDB paths. It records catalog associations, not object descriptions or compiled values; the registration [persistence and removal contract](shader-cache-registration.md#catalog-identity) is separate from database storage and file ownership.
 
 <a id="reconstruction-callbacks"></a>
 
@@ -536,6 +477,78 @@ caller-created copies retain their own ownership and lifetime rules.
 These call-lifetime guarantees do not establish a general cross-thread
 execution, same-database reentrancy or exception-transport guarantee. They do not
 import a prohibition on D3D calls from unrelated debug-message callbacks.
+
+<a id="application-identity-configuration"></a>
+
+## Application identity configuration
+
+<a id="id3d12applicationidentity-setapplicationidentity"></a>
+
+### ID3D12ApplicationIdentity::SetApplicationIdentity
+
+#### Declaration
+
+```cpp
+HRESULT SetApplicationIdentity(const D3D12_APPLICATION_DESC* pDesc, REFGUID AppId);
+```
+
+#### Behavior
+
+Sets or resets application identity in the global or factory configuration from
+which this interface was retrieved. The configured identity applies to subsequent
+device creation in that configuration's scope.
+
+Use `CLSID_D3D12ApplicationIdentity`
+(`08d8e1e8-75a6-42a7-bf3a-d05fe529c47c`) with
+[`D3D12GetInterface`](devices-and-capabilities.md#d3d12getinterface) for the
+global default identity used in subsequent device creation. Use
+[`ID3D12DeviceFactory::GetConfigurationInterface`](devices-and-capabilities.md#id3d12devicefactory-getconfigurationinterface)
+with the same class identifier for a factory's identity configuration.
+Both expose `ID3D12ApplicationIdentity`, derived from `IUnknown`.
+
+The [factory snapshot rules](devices-and-capabilities.md#id3d12devicefactory-initializefromglobalstate)
+and [ApplyToGlobalState](devices-and-capabilities.md#id3d12devicefactory-applytoglobalstate)
+govern copying configuration between global and factory state. Changing the
+global identity does not mutate a previously taken factory snapshot; changing
+configuration does not retroactively change identity already used for an
+existing device. Set the intended configuration before the corresponding
+device creation. The input strings and values are copied into configuration;
+the caller need not keep their buffers alive after the call returns.
+
+[Effective runtime identity](runtime-cache-discovery.md#effective-identity) defines the precedence of explicit configuration, registered metadata and available process-filename fallback, and distinguishes initialization from reuse of an existing device. The [PSDB eligibility guard](runtime-cache-discovery.md#compatibility) is separate from setting this configuration or validating a stored SODB object.
+
+#### Parameters
+
+`pDesc` (`const D3D12_APPLICATION_DESC*`, input)
+
+The application description to set. For a non-reset call this pointer and its
+referenced strings must be valid and readable for the duration of the call.
+The application must supply a nonempty application name. See
+[`D3D12_APPLICATION_DESC`](#d3d12_application_desc) for filename fallback and
+engine/version requirements. The configuration copies the input data.
+
+`AppId` (`REFGUID`, input)
+
+A version 4 universally unique identifier generated for the app that is
+self-identifying. It must not be `GUID_NULL` when `pDesc` is nonnull.
+
+To reset the configured identity, pass null `pDesc` together with `GUID_NULL`.
+The reset removes the configured identity from this global or factory
+configuration for future device creation; it does not alter existing devices
+or previously copied configuration snapshots. A null description with a nonnull
+GUID, or a nonnull description with `GUID_NULL`, is an invalid pair.
+
+When `ID3D12ApplicationIdentity::SetApplicationIdentity` is called with a nonnull
+description whose `D3D12_APPLICATION_DESC::pExeFilename` is null, the executable
+filename is determined by calling `GetModuleFileName` with a NULL handle.
+
+#### Return values
+
+Successful configuration, including reset, returns `S_OK`. A mismatched
+null-description/`GUID_NULL` pair returns `E_INVALIDARG`; allocation failure can
+return `E_OUTOFMEMORY`. The nonempty application-name requirement applies
+independently of implementation validation. No general rollback of configuration
+changes is guaranteed after an allocation failure.
 
 <a id="database-factory"></a>
 
@@ -1241,7 +1254,3 @@ int main()
 **1.619.1:** Handle root signature objects in `ID3D12StateObjectDatabase` setters.
 
 **1.619.3:** Fix `ID3D12StateObjectDatabase` store with `ID3D12RootSignature1::GetSerializedData`. It previously returned the root signature chunk instead of the container.
-
-The complete [published SQLite format](state-object-database-format.md)
-defines the schema, object groups, dependency relationships and application
-metadata row. Its format version is not an object or application version.

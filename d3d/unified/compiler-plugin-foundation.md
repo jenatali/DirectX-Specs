@@ -2,11 +2,8 @@
 
 # Compiler plugin foundation
 
-The compiler plugin DDI opens an independently usable IHV compiler, negotiates
-its interface version, retrieves function tables, installs runtime callback
-tables, and queries target capabilities without requiring a physical adapter.
-The [compiler factory and target API](offline-compilation.md) supplies the host
-side of this contract.
+This implementer-facing reference accompanies the
+[compiler factory and target API](offline-compilation.md).
 
 The published ABI is `d3d12compilerddi.h`, supplied in
 [Microsoft.Windows.WDK.x64 10.0.28000.2526](https://www.nuget.org/packages/Microsoft.Windows.WDK.x64/10.0.28000.2526).

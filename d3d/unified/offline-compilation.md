@@ -6,33 +6,11 @@ Offline driver/pipeline compilation produces vendor-dependent pipeline-state
 and state-object output from creation descriptions and shader bytecode. It is
 distinct from HLSL frontend compilation.
 
-This section defines compiler factory discovery and target/version/profile
-queries, together with the compiler-host root-signature serializer.
-[Plugin opening, negotiation and capabilities](compiler-plugin-foundation.md)
-define the corresponding driver foundation.
-
-[Input databases and application identity](state-object-databases-and-identity.md#database-inputs),
-[root-signature contents and runtime serialization](binding.md#d3d12serializeversionedrootsignature),
-[pipeline-state creation](pipeline-state.md),
-[state-object creation](state-objects.md#createstateobject), and
-[runtime shader delivery and caching](shader-delivery-and-caching.md)
-retain their separate contracts.
-
-[Compiler invocation and cache output](compiler-invocation-and-cache-output.md#compiler-invocation-and-cache-output) defines compiler/cache-session creation, PSO/state-object/addition compilation, retained compiler objects, typed output storage and group lookup. The factory/target/version and root-serialization contracts below remain canonical.
-
-[Registration target discovery](shader-cache-registration.md#target-discovery) supplies adapter-side ABI intervals and compiler/profile information for installation planning. Its application-dependent preference rules and device/adapter explorer context are defined there; the compiler factory's family indices, supported ABI enumeration and explicit target selection below remain distinct.
+The compiler API reference proceeds from factory and target queries below to
+[invocation and cache output](compiler-invocation-and-cache-output.md).
+The [plugin DDI](compiler-plugin-foundation.md) is the implementer-facing reference.
 
 <a id="motivation"></a>
-
-## Motivation
-
-As part of D3D12 PC game development, a game developer authors a number of custom programs that run on the Graphics Processing Unit at different stages, known as shaders.  Several of these shaders are combined with other state in D3D12 objects known as Pipeline State Objects(PSOs) or State Objects (SOs).  Due to the variety of hardware in the GPU space, the pace of innovation, and optimization that occurs after game titles ship, these programs are compiled in a vendor and GPU dependent way.  The compilation has traditionally occurred at runtime by the Independent Hardware Vendor(IHV) driver when the game is running.  This compilation is expensive and the count of unique PSOs and SOs combinations is ever increasing as titles become more complicated and graphics rich, reaching numbers in the hundred thousands today.  Existing mitigation strategies for this cost are not sufficient causing significant performance problems for gamers.
-
-As part of solving this problem, we need a means to compile PSOs and SOs outside of the game runtime. Today, Independent Hardware Vendors(IHV) compilers ship with the IHVs' DirectX drivers which traditionally only install when the vendor's display adapter is present. To support cloud compilation, IHVs must factor the compiler into a separate component that can run without a vendor's display adapter.
-
-The compiler plugin DDI allows IHVs to supply a compiler plugin dll for compilation of D3D12 Pipeline State Objects and D3D12 State Objects without a physical adapter present.
-
-A Microsoft API provides access to IHV compiler plugins.
 
 <a id="compiler-runtime-design"></a>
 
@@ -75,7 +53,8 @@ objects or returned blob implementations are in use.
 Factory/target discovery does not establish the presence of a matching physical
 adapter or device support for a pipeline. Compiler-host capabilities describe
 the selected target; actual runtime construction retains the capability rules
-of the creation APIs linked above.
+of [pipeline-state creation](pipeline-state.md) and
+[state-object creation](state-objects.md#createstateobject).
 
 <a id="version-domains"></a>
 
@@ -233,6 +212,10 @@ engine name (`nullptr` when not applicable), and engine version when an engine
 name is supplied. The process hosting the offline compiler does not supply an
 implicit executable-name fallback. These inputs and all referenced strings must
 remain readable during the call; this query does not transfer their ownership.
+
+[Registration target discovery](shader-cache-registration.md#target-discovery) supplies adapter-side ABI intervals and compiler/profile information for installation planning. Its application-dependent preference rules and device/adapter explorer context are defined there; the compiler factory's family indices, supported ABI enumeration and explicit target selection below remain distinct.
+
+[Runtime PSDB compatibility](runtime-cache-discovery.md#compatibility) applies the driver's inclusive ABI interval and high-32-bit application-profile comparison to stored content. This is distinct from enumerating compiler-supported ABIs or resolving an explicit zero-ABI compiler target.
 
 <a id="exports"></a>
 

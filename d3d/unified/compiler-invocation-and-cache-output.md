@@ -2,38 +2,14 @@
 
 # Compiler invocation and cache output
 
+The [factory and target API](offline-compilation.md) continues here with compiler
+invocation and cache output.
+
 A compiler cache session maps application group keys to vendor-generated value
 keys and stores the typed results of offline pipeline-state and state-object
 compilation. A compiler state object retains compilation state for collections
 and subsequent additions; it is not an `ID3D12StateObject` created by a device
 and cannot be submitted for GPU execution.
-
-These APIs compile pipeline/state descriptions through the IHV compiler plugin;
-they are not HLSL source-language frontend compilation calls.
-
-The [factory and target contracts](offline-compilation.md#offline-compilation)
-and [plugin negotiation](compiler-plugin-foundation.md#negotiation) establish
-the compiler context. Shared
-[application metadata](state-object-databases-and-identity.md#application-metadata)
-and [serialized root input forms](state-object-databases-and-identity.md#d3d12_serialized_root_signature_desc)
-are defined with the state-object database inputs. The output storage
-described here is the Precompiled Shader Database (PSDB).
-
-The [registration catalog](shader-cache-registration.md#catalog-identity) associates application components with SODB and PSDB paths after production. [RegisterComponent](shader-cache-registration.md#id3dshadercacheapplication-registercomponent) and its path getters do not replace this chapter's typed/group storage or validate registered file contents.
-
-`ID3D12Compiler` and `ID3D12CompilerCacheSession` derive from
-`ID3D12CompilerFactoryChild`; their inherited
-[`GetFactory`](offline-compilation.md#id3d12compilerfactorychild-getfactory)
-contract is not a new operation on either interface. `ID3D12CompilerStateObject`
-derives from `IUnknown` and exposes
-[`GetCompiler`](#id3d12compilerstateobject-getcompiler).
-
-The compiler plugin is responsible for synchronization as necessary,
-applications do not need to add external synchronization. Caller-owned
-descriptions, arrays, keys, strings, callback functions and context storage must
-remain valid while the receiving call uses them. That synchronization contract
-does not remove the object-reference or structural-dependency requirements
-below.
 
 <a id="output-storage"></a>
 
@@ -71,6 +47,8 @@ uses the family identifier, ABI and compiler version. The
 are distinct from application and engine versions in the
 [application descriptor](state-object-databases-and-identity.md#d3d12_application_desc),
 group versions, value-type flags and database-format versions.
+
+[Read-only runtime PSDB eligibility](runtime-cache-discovery.md#compatibility) and [implicit open/failure policy](runtime-cache-discovery.md#failure-and-lifetime) define consumption of registered output. Passing those checks is not a group/value hit and does not authorize writable cache maintenance, metadata replacement or the [producer's full-identity reopening rules](#id3d12compilerfactory-createcompilercachesession).
 
 <a id="output-types"></a>
 
@@ -682,6 +660,20 @@ compiler does not certify that every later description is compilable.
 <a id="input-ownership"></a>
 
 ## Compilation inputs and ownership
+
+`ID3D12Compiler` and `ID3D12CompilerCacheSession` derive from
+`ID3D12CompilerFactoryChild`; their inherited
+[`GetFactory`](offline-compilation.md#id3d12compilerfactorychild-getfactory)
+contract is not a new operation on either interface. `ID3D12CompilerStateObject`
+derives from `IUnknown` and exposes
+[`GetCompiler`](#id3d12compilerstateobject-getcompiler).
+
+The compiler plugin is responsible for synchronization as necessary,
+applications do not need to add external synchronization. Caller-owned
+descriptions, arrays, keys, strings, callback functions and context storage must
+remain valid while the receiving call uses them. That synchronization contract
+does not remove the object-reference or structural-dependency requirements
+below.
 
 Pipeline descriptions use
 [`D3D12_PIPELINE_STATE_STREAM_DESC`](pipeline-state.md#streams).

@@ -24,13 +24,7 @@ own payload layout and query validation. [CPU threading](execution.md#threading)
 and [submitted-object lifetime](execution.md#lifetime) remain execution
 contracts; a cache lookup, store, serialization or deletion is not proof of GPU completion.
 
-The complete [state-object database input and application identity contract](state-object-databases-and-identity.md#database-inputs) defines recorded PSO/state-object descriptions, keys, versions, reconstruction and metadata for explicit offline driver/pipeline compilation. An SODB contains compilation inputs, not the driver-compiled cache produced from them.
-
-The [offline compiler foundation](offline-compilation.md#offline-compilation) defines the separate compiler runtime, plugin factory, family/ABI/compiler/profile queries and compiler-host root-signature helper. The [plugin foundation](compiler-plugin-foundation.md#compiler-plugin-foundation) defines negotiated opening and target-capability reporting without requiring a physical adapter.
-
-[Compiler cache sessions](compiler-invocation-and-cache-output.md#id3d12compilerfactory-createcompilercachesession) store typed offline compilation results and [group mappings](compiler-invocation-and-cache-output.md#id3d12compilercachesession-storegroupvaluekeys) in PSDB storage. They are distinct from the application-selected opaque-value cache sessions and supported legacy pipeline caches below.
-
-[Shader-cache registration](shader-cache-registration.md#shader-cache-registration) defines installer/application/component catalog ownership, path associations, read-only exploration, target discovery and driver-update notification lifecycle. These are distinct from application-value caches, driver-cache controls and supported legacy pipeline caches.
+[Advanced Shader Delivery](advanced-shader-delivery.md) groups SODB inputs, offline compiler interfaces and registered precompiled shader database (PSDB) delivery. [Compiler cache sessions](compiler-invocation-and-cache-output.md#output-storage) store typed compilation results and group mappings, distinct from the application-selected opaque values and supported legacy pipeline caches below. [Runtime discovery](runtime-cache-discovery.md#runtime-cache-discovery) defines read-only PSDB eligibility and [retained initialization state](runtime-cache-discovery.md#failure-and-lifetime); it is not a cache-hit guarantee or a promise that cache controls rediscover a different registered component.
 
 <a id="cache-support"></a>
 
